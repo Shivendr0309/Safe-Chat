@@ -12,16 +12,22 @@ const User = require('./User');
 const Admin = require('./Admin');
 
 // 2. INITIALIZE APP & SERVER
+const express = require('express');
 const app = express();
-app.use(cors());
-app.use(express.json());
-const server = http.createServer(app);
+
+const cors = require('cors');
+
+app.use(cors({
+  origin: "https://shivendr0309.github.io",
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 
 // 3. CONFIGURE SOCKET.IO
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    origin: "https://shivendr0309.github.io",
+    methods: ["GET", "POST"],
   },
 });
 
