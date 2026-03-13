@@ -12,7 +12,7 @@ const User = require('./User');
 const Admin = require('./Admin');
 
 // 2. INITIALIZE APP & SERVER
-const express = require('express');
+
 const app = express();
 
 const cors = require('cors');
