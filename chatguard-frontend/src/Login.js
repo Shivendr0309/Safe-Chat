@@ -36,7 +36,7 @@ function Login({ onLoginSuccess }) {
     // --- SCENARIO 1: STUDENT REGISTRATION ---
     if (isRegister) {
       try {
-        const response = await fetch('http://localhost:4000/api/register-student', {
+        const response = await fetch('http://https://chatguard-backend.onrender.com/api/register-student', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, name, mobileNumber, password })
