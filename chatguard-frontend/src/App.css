@@ -1,0 +1,37 @@
+/* You can delete all the default 'App.css' styles if you want */
+
+.app-nav {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 8px 15px;
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.app-nav a {
+  text-decoration: none;
+  color: #007bff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+  margin: 0 10px;
+}
+
+.app-nav a:hover {
+  text-decoration: underline;
+}
+
+/* This makes sure our chat app doesn't get hidden under the nav */
+.chatguard-app {
+  margin-top: 40px; 
+}
+.app-nav a.active {
+  background-color: #e7f3ff; /* Light blue background */
+  color: #007bff;
+  font-weight: bold;
+  cursor: default; /* Show default cursor to indicate it's not clickable */
+  pointer-events: none; /* Optional: disable clicking */
+}

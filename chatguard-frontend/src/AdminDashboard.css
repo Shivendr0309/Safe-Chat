@@ -1,0 +1,254 @@
+/* Container */
+.admin-dashboard-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.admin-header {
+  background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.header-content h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.header-content p {
+  margin: 8px 0 0;
+  opacity: 0.9;
+  font-size: 1rem;
+}
+
+.header-stats {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+/* CONTROLS */
+.dashboard-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.filter-btn {
+  padding: 12px 24px;
+  border: none;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  font-size: 0.95rem;
+}
+
+.filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.filter-btn.active {
+  background: #2c3e50;
+  color: white;
+}
+
+.filter-btn.sent.active {
+  background: #d90429; /* Alert Red */
+  color: white;
+}
+
+.filter-btn.received.active {
+  background: #f0ad4e; /* Alert Orange */
+  color: white;
+}
+
+/* MESSAGE FEED */
+.message-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 60px;
+  background: white;
+  border-radius: 12px;
+  color: #888;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.no-messages .icon {
+  font-size: 4rem;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.no-messages h3 {
+  margin: 0 0 10px;
+  color: #333;
+}
+
+/* CARDS */
+.flagged-message-card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border-left: 6px solid #ccc;
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s ease;
+}
+
+.flagged-message-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Specific Card Colors */
+.flagged-message-card.sent {
+  border-left-color: #d90429; /* Red */
+}
+
+.flagged-message-card.received {
+  border-left-color: #f0ad4e; /* Orange */
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.sent {
+  background: #ffe3e3;
+  color: #d90429;
+}
+
+.status-badge.received {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.timestamp {
+  font-size: 0.9rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.card-body {
+  margin-bottom: 20px;
+}
+
+.message-label {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.message-text {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.user-info {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.user-info strong {
+  color: #333;
+}
+
+.dismiss-btn {
+  background: transparent;
+  border: 1px solid #ddd;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.dismiss-btn:hover {
+  background: #fff5f5;
+  color: #d90429;
+  border-color: #d90429;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 600px) {
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .header-stats {
+    width: 100%;
+    text-align: center;
+  }
+
+  .dashboard-controls {
+    flex-direction: column;
+  }
+  
+  .filter-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
