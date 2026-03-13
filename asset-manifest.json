@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/Safe-Chat/static/css/main.40fa75ff.css",
+    "main.js": "/Safe-Chat/static/js/main.fafc7d43.js",
+    "static/js/453.f930b22a.chunk.js": "/Safe-Chat/static/js/453.f930b22a.chunk.js",
+    "index.html": "/Safe-Chat/index.html",
+    "main.40fa75ff.css.map": "/Safe-Chat/static/css/main.40fa75ff.css.map",
+    "main.fafc7d43.js.map": "/Safe-Chat/static/js/main.fafc7d43.js.map",
+    "453.f930b22a.chunk.js.map": "/Safe-Chat/static/js/453.f930b22a.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.40fa75ff.css",
+    "static/js/main.fafc7d43.js"
+  ]
+}
