@@ -15,7 +15,6 @@ const Admin = require('./Admin');
 
 const app = express();
 
-const cors = require('cors');
 
 app.use(cors({
   origin: "https://shivendr0309.github.io",
