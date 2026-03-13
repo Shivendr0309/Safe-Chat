@@ -41,7 +41,7 @@ function Chat() {
   // --- SOCKET SETUP ---
   useEffect(() => {
     // Connect with username query param
-    socketRef.current = io('http://localhost:4000', {
+    socketRef.current = io('http://https://chatguard-backend.onrender.com', {
       query: { username: myUsername }
     });
 
