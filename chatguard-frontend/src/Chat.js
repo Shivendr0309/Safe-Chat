@@ -90,11 +90,12 @@ function Chat() {
 
     // Blocked message event
     socketRef.current.on('messageBlocked', (blockedMessage) => {
-      if (!chatWith) return;
+      const activeChat = chatWithRef.current;
+      if (!activeChat) return;
       setAllMessages(prev => ({
         ...prev,
-        [chatWith]: [
-          ...(prev[chatWith] || []),
+        [activeChat]: [
+          ...(prev[activeChat] || []),
           { ...blockedMessage, sender: 'system', timestamp: new Date().toISOString() }
         ]
       }));
@@ -102,11 +103,12 @@ function Chat() {
 
     // System notification event
     socketRef.current.on('systemNotification', (notification) => {
-       if (!chatWith) return;
+       const activeChat = chatWithRef.current;
+       if (!activeChat) return;
        setAllMessages(prev => ({
         ...prev,
-        [chatWith]: [
-          ...(prev[chatWith] || []),
+        [activeChat]: [
+          ...(prev[activeChat] || []),
           { ...notification, sender: 'system-info', timestamp: new Date().toISOString() }
         ]
       }));
