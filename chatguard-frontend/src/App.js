@@ -54,10 +54,7 @@ function AppContent() {
       {isLoggedIn && (
         <nav className="app-nav">
           {isAdmin && (
-            <>
-              <Link to="/chat">Chat</Link>
-              <Link to="/admin">Admin Dashboard</Link>
-            </>
+            <Link to="/admin">Admin Dashboard</Link>
           )}
           <a href="/" onClick={handleLogout} className="logout-btn">Logout</a>
         </nav>
@@ -108,7 +105,7 @@ function AppContent() {
           </>
         ) : (
           <>
-            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat" element={isAdmin ? <Navigate to="/admin" replace /> : <Chat />} />
             <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/chat" />} />
             <Route path="*" element={<Navigate to={isAdmin ? '/admin' : '/chat'} />} />
           </>

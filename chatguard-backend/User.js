@@ -16,10 +16,11 @@ const userSchema = new mongoose.Schema({
     type: String, 
     required: true 
   },
-  // This is the link to the parent's account
-  mobileNumber: { 
-    type: String, 
-    required: true 
+  // Optional parent contact number. Parent account linking uses the one-time code,
+  // not this field; the parent may sign in with a different number.
+  mobileNumber: {
+    type: String,
+    default: ''
   }, 
   isAdmin: { 
     type: Boolean, 
