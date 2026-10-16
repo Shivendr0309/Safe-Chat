@@ -50,6 +50,7 @@ const privateMessageSchema = new mongoose.Schema({
   from: { type: String, required: true, index: true },
   to: { type: String, required: true, index: true },
   mobileNumber: { type: String, default: '', index: true },
+  recipientMobileNumber: { type: String, default: '', index: true },
   timestamp: { type: Date, default: Date.now, index: true },
   isFlagged: { type: Boolean, default: false, index: true },
   moderationStatus: {
@@ -220,7 +221,10 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/admin/alerts', authenticateHttp, requireAdmin, async (req, res) => {
   try {
     const messages = await PrivateMessage.find({
-      mobileNumber: req.auth.mobileNumber,
+      $or: [
+        { mobileNumber: req.auth.mobileNumber },
+        { recipientMobileNumber: req.auth.mobileNumber },
+      ],
       isFlagged: true,
     }).sort({ timestamp: -1 }).limit(100).lean();
 
@@ -229,7 +233,7 @@ app.get('/api/admin/alerts', authenticateHttp, requireAdmin, async (req, res) =>
       message: message.text,
       sender: message.from,
       recipient: message.to,
-      type: message.from === message.to ? 'sent' : 'sent',
+      type: message.mobileNumber === req.auth.mobileNumber ? 'sent' : 'received',
       timestamp: message.timestamp,
       mobileNumber: message.mobileNumber,
       isFlagged: message.isFlagged,
@@ -278,7 +282,7 @@ function emitOnlineUsers() {
   io.emit('updateUserList', Array.from(userSocketMap.keys()));
 }
 
-function sendParentAlert(mobileNumber, message) {
+function sendParentAlert(mobileNumber, message, type) {
   if (!mobileNumber) return;
   for (const connectedSocket of io.sockets.sockets.values()) {
     const identity = connectedSocket.data.user;
@@ -286,7 +290,7 @@ function sendParentAlert(mobileNumber, message) {
       connectedSocket.emit('adminNotification', {
         id: String(message._id),
         mobileNumber,
-        type: 'sent',
+        type,
         message: message.text,
         sender: message.from,
         recipient: message.to,
@@ -357,7 +361,7 @@ io.on('connection', (socket) => {
     }
 
     try {
-      const recipient = await User.findOne({ username: to }).select('username').lean();
+      const recipient = await User.findOne({ username: to }).select('username mobileNumber').lean();
       if (!recipient) return socket.emit('chatError', { message: 'Recipient does not exist' });
 
       const moderation = await analyzeMessage(text);
@@ -366,6 +370,7 @@ io.on('connection', (socket) => {
         from: identity.username,
         to,
         mobileNumber: identity.mobileNumber || '',
+        recipientMobileNumber: recipient.mobileNumber || '',
         isFlagged: moderation.isFlagged,
         moderationStatus: moderation.status,
       });
@@ -384,7 +389,12 @@ io.on('connection', (socket) => {
       if (recipientSocketId) io.to(recipientSocketId).emit('privateMessage', message);
       socket.emit('privateMessage', message);
 
-      if (saved.isFlagged) sendParentAlert(identity.mobileNumber, saved);
+      if (saved.isFlagged) {
+        sendParentAlert(identity.mobileNumber, saved, 'sent');
+        if (recipient.mobileNumber !== identity.mobileNumber) {
+          sendParentAlert(recipient.mobileNumber, saved, 'received');
+        }
+      }
       if (moderation.status === 'unavailable') {
         socket.emit('moderationUnavailable', {
           message: 'AI moderation is temporarily unavailable. This message was not classified.',
