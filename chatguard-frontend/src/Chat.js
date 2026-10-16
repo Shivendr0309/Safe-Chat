@@ -26,6 +26,7 @@ function Chat() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(localStorage.getItem('safechat-notifications') === 'true');
   const notificationsEnabledRef = useRef(notificationsEnabled);
   const [generatingLinkCode, setGeneratingLinkCode] = useState(false);
+  const [linkCodeCopied, setLinkCodeCopied] = useState(false);
   const typingTimeoutRef = useRef(null);
 
   const messagesEndRef = useRef(null);
@@ -217,10 +218,21 @@ function Chat() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Could not create a parent link code.');
       setParentLinkCode(data.code);
+      setLinkCodeCopied(false);
     } catch (error) {
       setChatNotice(error.message || 'Could not create a parent link code.');
     } finally {
       setGeneratingLinkCode(false);
+    }
+  };
+
+  const copyParentLinkCode = async () => {
+    try {
+      await navigator.clipboard.writeText(parentLinkCode);
+      setLinkCodeCopied(true);
+      setChatNotice('Parent link code copied. Share it privately with your parent.');
+    } catch {
+      setChatNotice('Could not copy the code. Select and copy it manually.');
     }
   };
 
@@ -327,15 +339,31 @@ function Chat() {
             onChange={handleSearch}
             aria-label="Search online students"
           />
-          <button type="button" className="parent-link-trigger" onClick={generateParentLinkCode} disabled={generatingLinkCode}>
-            {generatingLinkCode ? 'Creating code…' : '＋ Link a parent'}
-          </button>
-          {parentLinkCode && <div className="parent-link-code-panel" role="status">
-            <strong>Parent link code</strong>
-            <code>{parentLinkCode}</code>
-            <span>Share privately with your parent. Expires in 15 minutes and works once.</span>
-            <button type="button" onClick={() => { navigator.clipboard?.writeText(parentLinkCode); }}>Copy code</button>
-          </div>}
+          <section className="parent-connect-card" aria-labelledby="parent-connect-title">
+            <div className="parent-connect-icon" aria-hidden="true">♧</div>
+            <div className="parent-connect-copy">
+              <span className="parent-connect-eyebrow">FAMILY CONNECTION</span>
+              <strong id="parent-connect-title">Connect a parent</strong>
+              <p>Give your parent secure access to safety alerts for your account.</p>
+            </div>
+            <button type="button" className="parent-link-trigger" onClick={generateParentLinkCode} disabled={generatingLinkCode}>
+              {generatingLinkCode ? 'Creating code…' : parentLinkCode ? 'Generate new code' : 'Create link code'}
+            </button>
+            {parentLinkCode ? (
+              <div className="parent-link-code-panel" role="status">
+                <span className="parent-code-label">YOUR ONE-TIME CODE</span>
+                <code>{parentLinkCode}</code>
+                <p>Ask your parent to sign in or create an account, then enter this code in the parent dashboard. It expires in 15 minutes and can be used once.</p>
+                <button type="button" onClick={copyParentLinkCode}>{linkCodeCopied ? '✓ Copied' : 'Copy code'}</button>
+              </div>
+            ) : (
+              <div className="parent-connect-steps">
+                <span><b>1</b> Generate a code</span>
+                <span><b>2</b> Share it privately</span>
+                <span><b>3</b> Parent links their account</span>
+              </div>
+            )}
+          </section>
         </div>
         
         <div className="users-list">
