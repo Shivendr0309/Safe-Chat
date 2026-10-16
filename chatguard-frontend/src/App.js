@@ -92,9 +92,7 @@ function AppContent() {
 // Main App Component
 function App() {
   return (
-    <BrowserRouter basename={process.env.NODE_ENV === 'production' ? '/Safe-Chat' : '/'}>
-      <AppContent />
-    </BrowserRouter>
+   <BrowserRouter>
   );
 }
 
