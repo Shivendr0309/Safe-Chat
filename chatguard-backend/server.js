@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
+const crypto = require('crypto');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -178,6 +179,24 @@ app.post('/api/register-student', authRateLimit, async (req, res) => {
   }
 });
 
+app.post('/api/parent-link-code', authenticateHttp, async (req, res) => {
+  try {
+    if (req.auth?.isAdmin || !req.auth?.username) {
+      return res.status(403).json({ message: 'Student account required' });
+    }
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    await User.findOneAndUpdate(
+      { username: req.auth.username },
+      { parentLinkCodeHash: codeHash, parentLinkCodeExpiresAt: new Date(Date.now() + 15 * 60 * 1000) }
+    );
+    return res.json({ code, expiresInSeconds: 900, message: 'Share this code privately with your parent. It can be used once.' });
+  } catch (error) {
+    console.error('Creating parent link code failed:', error.message);
+    return res.status(500).json({ message: 'Could not create a parent link code' });
+  }
+});
+
 app.post('/api/register-admin', authRateLimit, async (req, res) => {
   try {
     const mobileNumber = String(req.body.mobileNumber || '').trim();
@@ -190,13 +209,30 @@ app.post('/api/register-admin', authRateLimit, async (req, res) => {
       return res.status(400).json({ message: 'Password must contain at least 8 characters' });
     }
 
+    if (!/^[A-F0-9]{8}$/.test(linkCode)) {
+      return res.status(400).json({ message: 'Enter the 8-character parent link code generated from the student account' });
+    }
+    const codeHash = crypto.createHash('sha256').update(linkCode).digest('hex');
+    const linkedStudent = await User.findOne({
+      mobileNumber,
+      parentLinkCodeHash: codeHash,
+      parentLinkCodeExpiresAt: { $gt: new Date() },
+    }).select('+parentLinkCodeHash +parentLinkCodeExpiresAt');
+
+    if (!linkedStudent) {
+      return res.status(400).json({ message: 'That link code is invalid, expired, or does not match this parent mobile number.' });
+    }
+
     const existingAdmin = await Admin.findOne({ mobileNumber }).lean();
-    if (existingAdmin) return res.status(409).json({ message: 'Parent account already exists' });
+    if (existingAdmin) return res.status(409).json({ message: 'A parent account already exists for this mobile number. Sign in instead.' });
 
     await Admin.create({
       mobileNumber,
       password: await bcrypt.hash(password, 12),
     });
+    linkedStudent.parentLinkCodeHash = null;
+    linkedStudent.parentLinkCodeExpiresAt = null;
+    await linkedStudent.save();
     return res.status(201).json({ message: 'Parent account registered successfully' });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: 'Parent account already exists' });
