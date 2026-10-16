@@ -356,3 +356,17 @@
 @media (prefers-reduced-motion: reduce) {
   .settings-backdrop { backdrop-filter: none; }
 }
+
+
+.message-search-empty {
+  align-self: center;
+  max-width: 360px;
+  margin: auto;
+  padding: 18px 22px;
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  color: var(--muted-color);
+  font-size: .88rem;
+  line-height: 1.6;
+  text-align: center;
+}
