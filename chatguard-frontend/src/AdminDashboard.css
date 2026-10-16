@@ -194,3 +194,64 @@
   .admin-welcome { padding: 76px 22px 24px; }
   .welcome-art { display: none; }
 }
+
+
+/* Parent dashboard search and date-range controls */
+.alert-search-tools {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1.5fr) auto minmax(130px, .7fr) auto minmax(130px, .7fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 17px;
+  padding: 14px;
+  border: 1px solid #e8edf5;
+  border-radius: 15px;
+  background: #fff;
+}
+.alert-search-tools label {
+  color: #77849b;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.alert-search-tools input {
+  width: 100%;
+  min-width: 0;
+  min-height: 39px;
+  padding: 0 10px;
+  border: 1px solid #e4eaf2;
+  border-radius: 10px;
+  outline: none;
+  background: #f8fafc;
+  color: #253652;
+  font-size: .82rem;
+}
+.alert-search-tools input:focus-visible {
+  border-color: #7d71e8;
+  outline: 3px solid rgba(101,88,232,.14);
+}
+.alert-search-tools button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #e4e0ff;
+  border-radius: 10px;
+  background: #f3f1ff;
+  color: #584bd1;
+  font-size: .76rem;
+  font-weight: 750;
+}
+@media (max-width: 900px) {
+  .alert-search-tools {
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+  .alert-search-tools .alert-search-label { grid-column: 1; }
+  .alert-search-tools input[type="search"] { grid-column: 2 / -1; }
+}
+@media (max-width: 560px) {
+  .alert-search-tools {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 12px;
+  }
+  .alert-search-tools input[type="search"] { grid-column: auto; }
+  .alert-search-tools label { margin-top: 4px; }
+}

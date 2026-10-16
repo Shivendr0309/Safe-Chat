@@ -10,7 +10,6 @@ function Chat() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [allMessages, setAllMessages] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]); // For search
   const [chatWith, setChatWith] = useState(null);
   
   // UI States
@@ -18,10 +17,14 @@ function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [messageSearch, setMessageSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness
   const [connectionState, setConnectionState] = useState('connecting');
   const [chatNotice, setChatNotice] = useState('');
   const [parentLinkCode, setParentLinkCode] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(localStorage.getItem('safechat-notifications') === 'true');
+  const notificationsEnabledRef = useRef(notificationsEnabled);
   const [generatingLinkCode, setGeneratingLinkCode] = useState(false);
   const typingTimeoutRef = useRef(null);
 
@@ -34,6 +37,11 @@ function Chat() {
   const myUsername = localStorage.getItem('username');
   const myMobileNumber = localStorage.getItem('mobileNumber');
   chatWithRef.current = chatWith;
+  notificationsEnabledRef.current = notificationsEnabled;
+
+  useEffect(() => {
+    localStorage.setItem('safechat-notifications', String(notificationsEnabled));
+  }, [notificationsEnabled]);
 
   // --- THEME HANDLING ---
   useEffect(() => {
@@ -75,7 +83,6 @@ function Chat() {
     socketRef.current.on('updateUserList', (users) => {
       const otherUsers = users.filter(user => user !== myUsername);
       setOnlineUsers(otherUsers);
-      setFilteredUsers(otherUsers.filter(user => user.toLowerCase().includes(searchTerm.toLowerCase())));
     });
 
     socketRef.current.on('privateHistoryLoaded', ({ withUser, messages }) => {
@@ -89,6 +96,10 @@ function Chat() {
         if (message.id && existing.some(item => item.id === message.id)) return prev;
         return { ...prev, [chatPartner]: [...existing, message] };
       });
+      if (message.from !== myUsername && notificationsEnabledRef.current && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(`New message from ${message.from}`, { body: 'Open SafeChat to view your message.', tag: `safechat-${message.from}` });
+        notification.onclick = () => { window.focus(); notification.close(); };
+      }
       // Stop typing indicator if message received
       if (message.from === chatWithRef.current) setIsTyping(false);
     });
@@ -130,7 +141,7 @@ function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketRef.current?.disconnect();
     };
-  }, [myUsername, searchTerm]);
+  }, [myUsername]);
 
 
   // --- SCROLL & SEARCH ---
@@ -155,13 +166,13 @@ function Chat() {
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
-    setFilteredUsers(onlineUsers.filter(user => user.toLowerCase().includes(term)));
   };
 
 
   // --- USER INTERACTION ---
   const handleUserClick = (user) => {
     setChatWith(user);
+    setMessageSearch('');
     setChatNotice('');
     setIsTyping(false);
     socketRef.current?.emit('loadPrivateHistory', { user2: user });
@@ -173,6 +184,25 @@ function Chat() {
     setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
     }, 100);
+  };
+
+  const handleNotificationPreference = async (enabled) => {
+    if (!enabled) {
+      setNotificationsEnabled(false);
+      return;
+    }
+    if (!('Notification' in window)) {
+      setChatNotice('This browser does not support desktop notifications.');
+      return;
+    }
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') {
+      setNotificationsEnabled(true);
+      setChatNotice('Desktop notifications enabled.');
+    } else {
+      setNotificationsEnabled(false);
+      setChatNotice('Browser notification permission was not granted.');
+    }
   };
 
   const generateParentLinkCode = async () => {
@@ -228,15 +258,49 @@ function Chat() {
     setCurrentMessage('');
   };
 
+  const copyMessage = async (text) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable in this browser.');
+      await navigator.clipboard.writeText(text);
+      setChatNotice('Message copied to clipboard.');
+    } catch {
+      setChatNotice('Could not copy this message. Check browser clipboard permissions.');
+    }
+  };
+
   const formatTime = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const currentChatMessages = allMessages[chatWith] || [];
+  const filteredChatMessages = currentChatMessages.filter((message) => !messageSearch.trim() || String(message.text || '').toLowerCase().includes(messageSearch.trim().toLowerCase()));
+  const filteredUsers = onlineUsers.filter((user) => user.toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   return (
     <div className="chatguard-app-layout">
+      {settingsOpen && (
+        <div className="settings-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}>
+          <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <button type="button" className="settings-close" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button>
+            <div className="settings-profile-avatar">{(myUsername || 'S').charAt(0).toUpperCase()}</div>
+            <span className="settings-eyebrow">YOUR ACCOUNT</span>
+            <h2 id="settings-title">Profile & settings</h2>
+            <p className="settings-description">Manage your local SafeChat preferences.</p>
+            <div className="settings-account-row"><span>Username</span><strong>{myUsername || 'Student'}</strong></div>
+            <div className="settings-account-row"><span>Parent contact</span><strong>{myMobileNumber || 'Not available'}</strong></div>
+            <div className="settings-preference">
+              <span><strong>Desktop notifications</strong><small>Show new-message alerts while SafeChat is in the background.</small></span>
+              <input type="checkbox" checked={notificationsEnabled} onChange={(event) => handleNotificationPreference(event.target.checked)} aria-label="Enable desktop notifications" />
+            </div>
+            <div className="settings-preference">
+              <span><strong>Dark theme</strong><small>Use a darker appearance on this device.</small></span>
+              <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} aria-label="Enable dark theme" />
+            </div>
+            <p className="settings-footnote">Preferences are stored on this device. Browser notifications require your permission.</p>
+          </section>
+        </div>
+      )}
       {/* SIDEBAR */}
       <div className={`online-users-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
@@ -246,9 +310,12 @@ function Chat() {
           </div>
           <div className="sidebar-top">
             <h3>Messages</h3>
-            <button onClick={toggleTheme} className="icon-btn theme-btn" title="Toggle Theme">
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
+            <div className="sidebar-header-actions">
+              <button type="button" onClick={() => setSettingsOpen(true)} className="icon-btn" title="Profile and settings" aria-label="Open profile and settings">⚙</button>
+              <button type="button" onClick={toggleTheme} className="icon-btn theme-btn" title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}>
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+            </div>
           </div>
           
           {/* SEARCH BAR */}
@@ -290,6 +357,12 @@ function Chat() {
               <div className="user-info">
                 <span className="username">{user}</span>
                 <span className="status-text">Online</span>
+                {allMessages[user]?.length > 0 && (
+                  <span className="contact-preview" title={allMessages[user][allMessages[user].length - 1].text}>
+                    {allMessages[user][allMessages[user].length - 1].from === myUsername ? 'You: ' : ''}
+                    {allMessages[user][allMessages[user].length - 1].text}
+                  </span>
+                )}
               </div>
             </button>
           ))}
@@ -300,7 +373,7 @@ function Chat() {
       <div className="chatguard-app">
         <header className="chatguard-header">
           {/* Mobile Menu Button */}
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          <button type="button" className="mobile-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label={isSidebarOpen ? "Close contacts sidebar" : "Open contacts sidebar"} aria-expanded={isSidebarOpen}>
             ☰
           </button>
 
@@ -317,12 +390,19 @@ function Chat() {
           ) : (
             <div className="header-content">
               <div className="header-brand-mark" aria-hidden="true">✓</div>
-              <div className="header-text"><h1 className="header-title">SafeChat</h1><p className="header-subtitle">{connectionState === 'connected' ? 'Private conversations, thoughtfully protected' : connectionState === 'connecting' ? 'Connecting securely…' : 'Reconnecting to SafeChat…'}</p></div>
+              <div className="header-text"><h1 className="header-title">SafeChat</h1><p className={`header-subtitle connection-${connectionState}`} role="status">{connectionState === 'connected' ? 'Connected securely' : connectionState === 'connecting' ? 'Connecting securely…' : 'Connection interrupted · Reconnecting…'}</p></div>
             </div>
           )}
         </header>
 
         {chatNotice && <div className="chat-notice" role="status"><span>{chatNotice}</span><button type="button" onClick={() => setChatNotice('')} aria-label="Dismiss notification">×</button></div>}
+        {chatWith && (
+          <div className="conversation-tools">
+            <label className="conversation-search-label" htmlFor="conversation-search">Search loaded messages</label>
+            <input id="conversation-search" type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Find a loaded message…" className="conversation-search" />
+            {messageSearch && <span className="conversation-search-count">{filteredChatMessages.length} match{filteredChatMessages.length === 1 ? '' : 'es'}</span>}
+          </div>
+        )}
         <div 
           className="chat-window" 
           ref={chatWindowRef} 
@@ -338,7 +418,10 @@ function Chat() {
             </div>
           ) : (
             <div className="message-list">
-              {currentChatMessages.map((msg, idx) => {
+              {messageSearch && filteredChatMessages.length === 0 && (
+                <div className="message-search-empty" role="status">No loaded messages match “{messageSearch}”.</div>
+              )}
+              {filteredChatMessages.map((msg, idx) => {
                 // System Messages
                 if (msg.sender === 'system' || msg.sender === 'system-info') {
                   return (
@@ -368,7 +451,10 @@ function Chat() {
                         
                         <div className="message-meta">
                           <span>{formatTime(msg.timestamp)}</span>
-                          {isMyMessage && <span className="read-receipt">✓✓</span>}
+                          {msg.moderationStatus === 'unavailable' && <span className="moderation-unavailable" title="AI moderation could not classify this message">Safety check unavailable</span>}
+                          {msg.isFlagged && <span className="moderation-status-label">Flagged for review</span>}
+                          {isMyMessage && <span className="read-receipt" aria-label="Saved by server" title="Sent">✓</span>}
+                          <button type="button" className="message-copy-btn" onClick={() => copyMessage(msg.text || '')} aria-label="Copy message" title="Copy message">Copy</button>
                         </div>
                       </div>
                     </div>
@@ -391,14 +477,14 @@ function Chat() {
 
           {/* Scroll to Bottom Button */}
           {showScrollBtn && (
-            <button className="scroll-bottom-btn" onClick={scrollToBottom}>
+            <button type="button" className="scroll-bottom-btn" onClick={scrollToBottom} aria-label="Scroll to latest messages">
               ↓
             </button>
           )}
 
           <form className="message-input-form" onSubmit={handleSubmit}>
             {/* Placeholder buttons for future features */}
-            <button type="button" className="icon-btn attachment-btn" title="Attach File">📎</button>
+            <button type="button" className="icon-btn attachment-btn" title="File attachments are coming soon" aria-label="File attachments coming soon" disabled>📎</button>
             
             <input
               ref={inputRef}
@@ -410,7 +496,7 @@ function Chat() {
               disabled={!chatWith}
             />
             
-            <button type="button" className="icon-btn emoji-btn" title="Add Emoji">😊</button>
+            <button type="button" className="icon-btn emoji-btn" title="Emoji picker coming soon" aria-label="Emoji picker coming soon" disabled>😊</button>
             
             <button type="submit" className="send-button" disabled={!chatWith || !currentMessage.trim() || connectionState !== 'connected'}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">

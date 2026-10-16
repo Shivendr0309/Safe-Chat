@@ -6,6 +6,9 @@ import './AdminDashboard.css';
 function AdminDashboard() {
   const [flaggedMessages, setFlaggedMessages] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [alertSearch, setAlertSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loadError, setLoadError] = useState('');
   const token = localStorage.getItem('token');
   const myMobileNumber = localStorage.getItem('mobileNumber');
@@ -53,9 +56,15 @@ function AdminDashboard() {
     };
   }, [token]);
 
-  const filteredMessages = flaggedMessages.filter((message) =>
-    filter === 'all' ? true : message.type === filter
-  );
+  const filteredMessages = flaggedMessages.filter((message) => {
+    const matchesDirection = filter === 'all' || message.type === filter;
+    const searchable = [message.message, message.sender, message.recipient].filter(Boolean).join(' ').toLowerCase();
+    const matchesSearch = searchable.includes(alertSearch.trim().toLowerCase());
+    const timestamp = new Date(message.timestamp);
+    const start = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const end = dateTo ? new Date(`${dateTo}T23:59:59.999`) : null;
+    return matchesDirection && matchesSearch && (!start || timestamp >= start) && (!end || timestamp <= end);
+  });
   const receivedCount = flaggedMessages.filter((message) => message.type === 'received').length;
   const sentCount = flaggedMessages.filter((message) => message.type === 'sent').length;
 
@@ -115,6 +124,16 @@ function AdminDashboard() {
           <span className="results-count">{filteredMessages.length} {filteredMessages.length === 1 ? 'result' : 'results'}</span>
         </div>
 
+        <div className="alert-search-tools">
+          <label className="alert-search-label" htmlFor="alert-search">Search alerts</label>
+          <input id="alert-search" type="search" value={alertSearch} onChange={(event) => setAlertSearch(event.target.value)} placeholder="Search message or username…" />
+          <label htmlFor="alert-date-from">From</label>
+          <input id="alert-date-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+          <label htmlFor="alert-date-to">To</label>
+          <input id="alert-date-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+          {(alertSearch || dateFrom || dateTo) && <button type="button" onClick={() => { setAlertSearch(''); setDateFrom(''); setDateTo(''); }}>Clear filters</button>}
+        </div>
+
         {loadError && <p className="error-message" role="alert">{loadError}</p>}
 
         <div className="message-feed">
@@ -126,8 +145,8 @@ function AdminDashboard() {
                 <span className="empty-spark empty-spark-a">✦</span><span className="empty-spark empty-spark-b">✧</span>
               </div>
               <span className="empty-kicker">YOU'RE ALL CAUGHT UP</span>
-              <h3>{filter === 'all' ? 'A little peace of mind.' : filter === 'sent' ? 'No sent alerts' : 'No received alerts'}</h3>
-              <p>{filter === 'all' ? 'There are no flagged conversations to review right now. We’ll show new alerts here when they arrive.' : `No flagged messages ${filter === 'sent' ? 'sent by' : 'received by'} the student have been found.`}</p>
+              <h3>{alertSearch || dateFrom || dateTo ? 'No matching alerts' : filter === 'all' ? 'A little peace of mind.' : filter === 'sent' ? 'No sent alerts' : 'No received alerts'}</h3>
+              <p>{alertSearch || dateFrom || dateTo ? 'Try changing your search or date range.' : filter === 'all' ? 'There are no flagged conversations to review right now. We’ll show new alerts here when they arrive.' : `No flagged messages ${filter === 'sent' ? 'sent by' : 'received by'} the student have been found.`}</p>
               <div className="empty-status"><span /> Monitoring is active</div>
             </div>
           )}
