@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
+const crypto = require('crypto');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -14,6 +15,29 @@ const Admin = require('./Admin');
 
 const app = express();
 const server = http.createServer(app);
+
+// Small per-process rate limiter. For multi-instance production deployments,
+// replace this with a shared store such as Redis.
+const rateBuckets = new Map();
+function rateLimit({ windowMs = 60_000, max = 30, key = (req) => req.ip } = {}) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const bucketKey = key(req);
+    let bucket = rateBuckets.get(bucketKey);
+    if (!bucket || now >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      rateBuckets.set(bucketKey, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      res.set('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)));
+      return res.status(429).json({ message: 'Too many requests. Please wait and try again.' });
+    }
+    return next();
+  };
+}
+const authRateLimit = rateLimit({ windowMs: 15 * 60_000, max: 12 });
+const apiRateLimit = rateLimit({ windowMs: 60_000, max: 120 });
 
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -36,6 +60,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '20kb' }));
+app.use('/api', apiRateLimit);
 
 const io = new Server(server, {
   cors: {
@@ -101,7 +126,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.post('/api/register-student', async (req, res) => {
+app.post('/api/register-student', authRateLimit, async (req, res) => {
   try {
     const username = String(req.body.username || '').trim();
     const name = String(req.body.name || '').trim();
@@ -154,10 +179,29 @@ app.post('/api/register-student', async (req, res) => {
   }
 });
 
-app.post('/api/register-admin', async (req, res) => {
+app.post('/api/parent-link-code', authenticateHttp, async (req, res) => {
+  try {
+    if (req.auth?.isAdmin || !req.auth?.username) {
+      return res.status(403).json({ message: 'Student account required' });
+    }
+    const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    await User.findOneAndUpdate(
+      { username: req.auth.username },
+      { parentLinkCodeHash: codeHash, parentLinkCodeExpiresAt: new Date(Date.now() + 15 * 60 * 1000) }
+    );
+    return res.json({ code, expiresInSeconds: 900, message: 'Share this code privately with your parent. It can be used once.' });
+  } catch (error) {
+    console.error('Creating parent link code failed:', error.message);
+    return res.status(500).json({ message: 'Could not create a parent link code' });
+  }
+});
+
+app.post('/api/register-admin', authRateLimit, async (req, res) => {
   try {
     const mobileNumber = String(req.body.mobileNumber || '').trim();
     const password = String(req.body.password || '');
+    const linkCode = String(req.body.linkCode || '').trim().toUpperCase();
 
     if (!/^\+?[0-9]{10,15}$/.test(mobileNumber)) {
       return res.status(400).json({ message: 'Enter a valid mobile number' });
@@ -166,13 +210,30 @@ app.post('/api/register-admin', async (req, res) => {
       return res.status(400).json({ message: 'Password must contain at least 8 characters' });
     }
 
+    if (!/^[A-F0-9]{8}$/.test(linkCode)) {
+      return res.status(400).json({ message: 'Enter the 8-character parent link code generated from the student account' });
+    }
+    const codeHash = crypto.createHash('sha256').update(linkCode).digest('hex');
+    const linkedStudent = await User.findOne({
+      mobileNumber,
+      parentLinkCodeHash: codeHash,
+      parentLinkCodeExpiresAt: { $gt: new Date() },
+    }).select('+parentLinkCodeHash +parentLinkCodeExpiresAt');
+
+    if (!linkedStudent) {
+      return res.status(400).json({ message: 'That link code is invalid, expired, or does not match this parent mobile number.' });
+    }
+
     const existingAdmin = await Admin.findOne({ mobileNumber }).lean();
-    if (existingAdmin) return res.status(409).json({ message: 'Parent account already exists' });
+    if (existingAdmin) return res.status(409).json({ message: 'A parent account already exists for this mobile number. Sign in instead.' });
 
     await Admin.create({
       mobileNumber,
       password: await bcrypt.hash(password, 12),
     });
+    linkedStudent.parentLinkCodeHash = null;
+    linkedStudent.parentLinkCodeExpiresAt = null;
+    await linkedStudent.save();
     return res.status(201).json({ message: 'Parent account registered successfully' });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: 'Parent account already exists' });
@@ -181,7 +242,7 @@ app.post('/api/register-admin', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authRateLimit, async (req, res) => {
   try {
     const password = String(req.body.password || '');
     if (!password) return res.status(400).json({ message: 'Password is required' });
@@ -347,7 +408,7 @@ io.on('connection', (socket) => {
 
       socket.emit('privateHistoryLoaded', {
         withUser: user2,
-        messages: history.map((message) => ({
+        messages: history.reverse().map((message) => ({
           id: String(message._id),
           text: message.text,
           from: message.from,
@@ -363,8 +424,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  let messageWindowStart = Date.now();
+  let messageWindowCount = 0;
   socket.on('privateMessage', async (data = {}) => {
     if (identity.isAdmin || !identity.username) return;
+    const now = Date.now();
+    if (now - messageWindowStart >= 60_000) {
+      messageWindowStart = now;
+      messageWindowCount = 0;
+    }
+    messageWindowCount += 1;
+    if (messageWindowCount > 30) {
+      socket.emit('chatError', { message: 'You are sending messages too quickly. Please wait a moment.' });
+      return;
+    }
     const text = typeof data.text === 'string' ? data.text.trim() : '';
     const to = typeof data.to === 'string' ? data.to.trim() : '';
 
@@ -400,6 +473,7 @@ io.on('connection', (socket) => {
       const recipientSocketId = userSocketMap.get(to);
       if (recipientSocketId) io.to(recipientSocketId).emit('privateMessage', message);
       socket.emit('privateMessage', message);
+      socket.emit('messageSent', { id: message.id, timestamp: message.timestamp, moderationStatus: message.moderationStatus });
 
       if (saved.isFlagged) {
         sendParentAlert(identity.mobileNumber, saved, 'sent');
