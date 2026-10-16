@@ -136,7 +136,19 @@ app.post('/api/register-student', async (req, res) => {
       username: user.username,
     });
   } catch (error) {
-    if (error.code === 11000) return res.status(409).json({ message: 'Username already taken' });
+    if (error.code === 11000) {
+      const duplicateFields = Object.keys(error.keyPattern || error.keyValue || {});
+      console.error('Student registration duplicate-key error:', {
+        duplicateFields,
+        message: error.message,
+      });
+      if (duplicateFields.includes('username')) {
+        return res.status(409).json({ message: 'Username already taken' });
+      }
+      return res.status(409).json({
+        message: 'A database value conflicts with an existing record. Please check the registration details or contact support.',
+      });
+    }
     console.error('Student registration failed:', error.message);
     return res.status(500).json({ message: 'Could not register student' });
   }
