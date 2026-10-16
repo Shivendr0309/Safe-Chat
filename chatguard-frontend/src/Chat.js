@@ -130,7 +130,7 @@ function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketRef.current?.disconnect();
     };
-  }, [myUsername]);
+  }, [myUsername, searchTerm]);
 
 
   // --- SCROLL & SEARCH ---
