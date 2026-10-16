@@ -1,0 +1,39 @@
+name: SafeChat CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chatguard-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: chatguard-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chatguard-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: chatguard-backend/package-lock.json
+      - run: npm ci
+      - run: node --check server.js
+      - run: node --check User.js
+      - run: node --check Admin.js
