@@ -24,10 +24,12 @@ function Chat() {
   const messagesEndRef = useRef(null);
   const chatWindowRef = useRef(null);
   const socketRef = useRef(null);
+  const chatWithRef = useRef(null);
   const inputRef = useRef(null);
 
   const myUsername = localStorage.getItem('username');
   const myMobileNumber = localStorage.getItem('mobileNumber');
+  chatWithRef.current = chatWith;
 
   // --- THEME HANDLING ---
   useEffect(() => {
@@ -76,12 +78,12 @@ function Chat() {
         [chatPartner]: [...(prev[chatPartner] || []), message]
       }));
       // Stop typing indicator if message received
-      if (message.from === chatWith) setIsTyping(false);
+      if (message.from === chatWithRef.current) setIsTyping(false);
     });
 
     // Typing event
     socketRef.current.on('userTyping', ({ from, isTyping }) => {
-      if (from === chatWith) {
+      if (from === chatWithRef.current) {
         setIsTyping(isTyping);
       }
     });
@@ -114,7 +116,7 @@ function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketRef.current?.disconnect();
     };
-  }, [myUsername, chatWith]);
+  }, [myUsername]);
 
 
   // --- SCROLL & SEARCH ---
