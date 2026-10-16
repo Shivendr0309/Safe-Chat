@@ -10,7 +10,7 @@
   border: 1px solid rgba(228, 232, 241, .9);
   border-radius: 14px;
   background: rgba(255, 255, 255, .92);
-  box-shadow: 0 8px 28px rgba(29, 42, 78, .1);
+  box-shadow: 0 8px 28px rgba(21, 68, 50, .09);
   backdrop-filter: blur(14px);
 }
 .app-nav a {
@@ -20,15 +20,15 @@
   padding: 0 13px;
   margin: 0;
   border-radius: 9px;
-  color: #4b5872;
+  color: #506b60;
   text-decoration: none;
   font-size: .88rem;
   font-weight: 700;
   transition: background .18s ease, color .18s ease;
 }
 .app-nav a:hover, .app-nav a.active {
-  background: #eef2ff;
-  color: #4338ca;
+  background: #e8f6ef;
+  color: #087e68;
   text-decoration: none;
 }
 .app-nav .logout-btn { color: #b42336; }
@@ -209,3 +209,18 @@ body .sc-modal-backdrop .sc-modal-confirm svg {
   body .sc-modal-backdrop { padding: 16px !important; }
   body .sc-modal-backdrop .sc-confirm-modal { width: 100% !important; padding: 23px !important; }
 }
+
+
+/* Unified green-and-white app navigation */
+.app-nav {
+  border-color: rgba(220, 235, 226, .95);
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 10px 32px rgba(24, 69, 51, .09);
+}
+.app-nav a { color: #526b61; }
+.app-nav a:hover, .app-nav a.active {
+  background: #e8f6ef;
+  color: #087e68;
+}
+.app-nav .logout-btn { color: #b42336; }
+.app-nav .logout-btn:hover { background: #fff1f2; color: #9f1239; }
