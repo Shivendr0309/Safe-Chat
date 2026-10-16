@@ -22,6 +22,9 @@ function Chat() {
   const [connectionState, setConnectionState] = useState('connecting');
   const [chatNotice, setChatNotice] = useState('');
   const [parentLinkCode, setParentLinkCode] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(localStorage.getItem('safechat-notifications') === 'true');
+  const notificationsEnabledRef = useRef(notificationsEnabled);
   const [generatingLinkCode, setGeneratingLinkCode] = useState(false);
   const typingTimeoutRef = useRef(null);
 
@@ -34,6 +37,11 @@ function Chat() {
   const myUsername = localStorage.getItem('username');
   const myMobileNumber = localStorage.getItem('mobileNumber');
   chatWithRef.current = chatWith;
+  notificationsEnabledRef.current = notificationsEnabled;
+
+  useEffect(() => {
+    localStorage.setItem('safechat-notifications', String(notificationsEnabled));
+  }, [notificationsEnabled]);
 
   // --- THEME HANDLING ---
   useEffect(() => {
@@ -88,6 +96,10 @@ function Chat() {
         if (message.id && existing.some(item => item.id === message.id)) return prev;
         return { ...prev, [chatPartner]: [...existing, message] };
       });
+      if (message.from !== myUsername && notificationsEnabledRef.current && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(`New message from ${message.from}`, { body: String(message.text || '').slice(0, 120), tag: `safechat-${message.from}` });
+        notification.onclick = () => { window.focus(); notification.close(); };
+      }
       // Stop typing indicator if message received
       if (message.from === chatWithRef.current) setIsTyping(false);
     });
@@ -173,6 +185,25 @@ function Chat() {
     }, 100);
   };
 
+  const handleNotificationPreference = async (enabled) => {
+    if (!enabled) {
+      setNotificationsEnabled(false);
+      return;
+    }
+    if (!('Notification' in window)) {
+      setChatNotice('This browser does not support desktop notifications.');
+      return;
+    }
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission === 'granted') {
+      setNotificationsEnabled(true);
+      setChatNotice('Desktop notifications enabled.');
+    } else {
+      setNotificationsEnabled(false);
+      setChatNotice('Browser notification permission was not granted.');
+    }
+  };
+
   const generateParentLinkCode = async () => {
     setGeneratingLinkCode(true);
     setParentLinkCode('');
@@ -247,6 +278,28 @@ function Chat() {
 
   return (
     <div className="chatguard-app-layout">
+      {settingsOpen && (
+        <div className="settings-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSettingsOpen(false); }}>
+          <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <button type="button" className="settings-close" onClick={() => setSettingsOpen(false)} aria-label="Close settings">×</button>
+            <div className="settings-profile-avatar">{(myUsername || 'S').charAt(0).toUpperCase()}</div>
+            <span className="settings-eyebrow">YOUR ACCOUNT</span>
+            <h2 id="settings-title">Profile & settings</h2>
+            <p className="settings-description">Manage your local SafeChat preferences.</p>
+            <div className="settings-account-row"><span>Username</span><strong>{myUsername || 'Student'}</strong></div>
+            <div className="settings-account-row"><span>Parent contact</span><strong>{myMobileNumber || 'Not available'}</strong></div>
+            <div className="settings-preference">
+              <span><strong>Desktop notifications</strong><small>Show new-message alerts while SafeChat is in the background.</small></span>
+              <input type="checkbox" checked={notificationsEnabled} onChange={(event) => handleNotificationPreference(event.target.checked)} aria-label="Enable desktop notifications" />
+            </div>
+            <div className="settings-preference">
+              <span><strong>Dark theme</strong><small>Use a darker appearance on this device.</small></span>
+              <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} aria-label="Enable dark theme" />
+            </div>
+            <p className="settings-footnote">Preferences are stored on this device. Browser notifications require your permission.</p>
+          </section>
+        </div>
+      )}
       {/* SIDEBAR */}
       <div className={`online-users-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
@@ -256,9 +309,12 @@ function Chat() {
           </div>
           <div className="sidebar-top">
             <h3>Messages</h3>
-            <button type="button" onClick={toggleTheme} className="icon-btn theme-btn" title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}>
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
+            <div className="sidebar-header-actions">
+              <button type="button" onClick={() => setSettingsOpen(true)} className="icon-btn" title="Profile and settings" aria-label="Open profile and settings">⚙</button>
+              <button type="button" onClick={toggleTheme} className="icon-btn theme-btn" title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}>
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+            </div>
           </div>
           
           {/* SEARCH BAR */}
