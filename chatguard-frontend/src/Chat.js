@@ -97,7 +97,7 @@ function Chat() {
         return { ...prev, [chatPartner]: [...existing, message] };
       });
       if (message.from !== myUsername && notificationsEnabledRef.current && document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(`New message from ${message.from}`, { body: String(message.text || '').slice(0, 120), tag: `safechat-${message.from}` });
+        const notification = new Notification(`New message from ${message.from}`, { body: 'Open SafeChat to view your message.', tag: `safechat-${message.from}` });
         notification.onclick = () => { window.focus(); notification.close(); };
       }
       // Stop typing indicator if message received
@@ -172,6 +172,7 @@ function Chat() {
   // --- USER INTERACTION ---
   const handleUserClick = (user) => {
     setChatWith(user);
+    setMessageSearch('');
     setChatNotice('');
     setIsTyping(false);
     socketRef.current?.emit('loadPrivateHistory', { user2: user });
@@ -397,8 +398,8 @@ function Chat() {
         {chatNotice && <div className="chat-notice" role="status"><span>{chatNotice}</span><button type="button" onClick={() => setChatNotice('')} aria-label="Dismiss notification">×</button></div>}
         {chatWith && (
           <div className="conversation-tools">
-            <label className="conversation-search-label" htmlFor="conversation-search">Search this conversation</label>
-            <input id="conversation-search" type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Find a message…" className="conversation-search" />
+            <label className="conversation-search-label" htmlFor="conversation-search">Search loaded messages</label>
+            <input id="conversation-search" type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Find a loaded message…" className="conversation-search" />
             {messageSearch && <span className="conversation-search-count">{filteredChatMessages.length} match{filteredChatMessages.length === 1 ? '' : 'es'}</span>}
           </div>
         )}
@@ -417,6 +418,9 @@ function Chat() {
             </div>
           ) : (
             <div className="message-list">
+              {messageSearch && filteredChatMessages.length === 0 && (
+                <div className="message-search-empty" role="status">No loaded messages match “{messageSearch}”.</div>
+              )}
               {filteredChatMessages.map((msg, idx) => {
                 // System Messages
                 if (msg.sender === 'system' || msg.sender === 'system-info') {
