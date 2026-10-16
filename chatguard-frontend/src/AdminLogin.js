@@ -6,6 +6,7 @@ import './AdminLogin.css';
 function AdminLogin({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
+  const [linkCode, setLinkCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,7 +23,7 @@ function AdminLogin({ onLoginSuccess }) {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: mobileNumber.trim(), password }),
+        body: JSON.stringify({ mobileNumber: mobileNumber.trim(), password, ...(isRegister ? { linkCode: linkCode.trim().toUpperCase() } : {}) }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -33,6 +34,7 @@ function AdminLogin({ onLoginSuccess }) {
         setSuccess('Parent account created. Please sign in to continue.');
         setIsRegister(false);
         setPassword('');
+        setLinkCode('');
         return;
       }
       if (!data.isAdmin) {
@@ -69,6 +71,7 @@ function AdminLogin({ onLoginSuccess }) {
           <div className="auth-mode-switch" role="group" aria-label="Account action"><button type="button" className={!isRegister ? 'active' : ''} onClick={() => { setIsRegister(false); setError(''); setSuccess(''); }} disabled={loading}>Sign in</button><button type="button" className={isRegister ? 'active' : ''} onClick={() => { setIsRegister(true); setError(''); setSuccess(''); }} disabled={loading}>Create account</button></div>
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-field"><label htmlFor="parent-mobile-number">Mobile number</label><input id="parent-mobile-number" type="tel" placeholder="Enter your registered mobile number" value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} autoComplete="tel" required disabled={loading} /></div>
+            {isRegister && <div className="auth-field"><label htmlFor="parent-link-code">Student-generated link code</label><input id="parent-link-code" type="text" placeholder="Enter the 8-character code" value={linkCode} onChange={e => setLinkCode(e.target.value.toUpperCase())} minLength={8} maxLength={8} autoComplete="one-time-code" required disabled={loading} /><span className="auth-field-hint">Ask the student to generate this code in SafeChat. It expires after 15 minutes.</span></div>}
             <div className="auth-field"><div className="auth-label-row"><label htmlFor="parent-password">Password</label><span className="auth-inline-note">{isRegister ? '8+ characters' : 'Keep it private'}</span></div><input id="parent-password" type="password" placeholder={isRegister ? 'Create a strong password' : 'Enter your password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={8} required disabled={loading} /></div>
             {error && <div className="auth-notice error" role="alert">! <span>{error}</span></div>}
             {success && <div className="auth-notice success" role="status">✓ <span>{success}</span></div>}
