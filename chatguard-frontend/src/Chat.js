@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Chat.css';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from './config';
 
 // Helper to get theme from storage
 const getInitialTheme = () => localStorage.getItem('theme') || 'light';
@@ -18,7 +19,7 @@ function Chat() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness
-  const [typingTimeout, setTypingTimeout] = useState(null);
+  const typingTimeoutRef = useRef(null);
 
   const messagesEndRef = useRef(null);
   const chatWindowRef = useRef(null);
@@ -41,8 +42,21 @@ function Chat() {
   // --- SOCKET SETUP ---
   useEffect(() => {
     // Connect with username query param
-    socketRef.current = io('http://https://chatguard-backend.onrender.com', {
-      query: { username: myUsername }
+    socketRef.current = io(API_BASE_URL, {
+      auth: { token: localStorage.getItem('token') },
+      transports: ['websocket', 'polling'],
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Safe-Chat connection failed:', error.message);
+    });
+
+    socketRef.current.on('chatError', ({ message }) => {
+      window.alert(message || 'Chat action failed.');
+    });
+
+    socketRef.current.on('moderationUnavailable', ({ message }) => {
+      window.alert(message || 'AI moderation is currently unavailable.');
     });
 
     socketRef.current.on('updateUserList', (users) => {
@@ -97,7 +111,8 @@ function Chat() {
     });
 
     return () => {
-      socketRef.current.disconnect();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      socketRef.current?.disconnect();
     };
   }, [myUsername, chatWith]);
 
@@ -132,7 +147,7 @@ function Chat() {
   const handleUserClick = (user) => {
     setChatWith(user);
     setIsTyping(false);
-    socketRef.current.emit('loadPrivateHistory', { user1: myUsername, user2: user });
+    socketRef.current?.emit('loadPrivateHistory', { user2: user });
     
     // On mobile, close sidebar after selection
     if (window.innerWidth < 768) setIsSidebarOpen(false);
@@ -147,15 +162,13 @@ function Chat() {
     setCurrentMessage(e.target.value);
 
     if (chatWith) {
-      socketRef.current.emit('typing', { to: chatWith, isTyping: true });
+      socketRef.current?.emit('typing', { to: chatWith, isTyping: true });
 
-      if (typingTimeout) clearTimeout(typingTimeout);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-      const timeout = setTimeout(() => {
-        socketRef.current.emit('typing', { to: chatWith, isTyping: false });
+      typingTimeoutRef.current = setTimeout(() => {
+        socketRef.current?.emit('typing', { to: chatWith, isTyping: false });
       }, 2000);
-      
-      setTypingTimeout(timeout);
     }
   };
 
@@ -173,8 +186,8 @@ function Chat() {
       timestamp: new Date().toISOString()
     };
 
-    socketRef.current.emit('privateMessage', newMessage);
-    socketRef.current.emit('typing', { to: chatWith, isTyping: false }); // Stop typing immediately
+    socketRef.current?.emit('privateMessage', newMessage);
+    socketRef.current?.emit('typing', { to: chatWith, isTyping: false }); // Stop typing immediately
     setCurrentMessage('');
   };
 
