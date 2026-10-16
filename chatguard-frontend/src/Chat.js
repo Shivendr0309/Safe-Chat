@@ -300,7 +300,7 @@ function Chat() {
             <h2 id="settings-title">Profile & settings</h2>
             <p className="settings-description">Manage your local SafeChat preferences.</p>
             <div className="settings-account-row"><span>Username</span><strong>{myUsername || 'Student'}</strong></div>
-            <div className="settings-account-row"><span>Parent contact</span><strong>{myMobileNumber || 'Not available'}</strong></div>
+            <div className="settings-account-row"><span>Parent contact number</span><strong>{myMobileNumber || 'Not provided'}</strong></div>
             <div className="settings-preference">
               <span><strong>Desktop notifications</strong><small>Show new-message alerts while SafeChat is in the background.</small></span>
               <input type="checkbox" checked={notificationsEnabled} onChange={(event) => handleNotificationPreference(event.target.checked)} aria-label="Enable desktop notifications" />
