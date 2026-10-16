@@ -10,7 +10,6 @@ function Chat() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [allMessages, setAllMessages] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]); // For search
   const [chatWith, setChatWith] = useState(null);
   
   // UI States
@@ -75,7 +74,6 @@ function Chat() {
     socketRef.current.on('updateUserList', (users) => {
       const otherUsers = users.filter(user => user !== myUsername);
       setOnlineUsers(otherUsers);
-      setFilteredUsers(otherUsers.filter(user => user.toLowerCase().includes(searchTerm.toLowerCase())));
     });
 
     socketRef.current.on('privateHistoryLoaded', ({ withUser, messages }) => {
@@ -130,7 +128,7 @@ function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       socketRef.current?.disconnect();
     };
-  }, [myUsername, searchTerm]);
+  }, [myUsername]);
 
 
   // --- SCROLL & SEARCH ---
@@ -155,7 +153,6 @@ function Chat() {
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
-    setFilteredUsers(onlineUsers.filter(user => user.toLowerCase().includes(term)));
   };
 
 
@@ -234,6 +231,7 @@ function Chat() {
   };
 
   const currentChatMessages = allMessages[chatWith] || [];
+  const filteredUsers = onlineUsers.filter((user) => user.toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   return (
     <div className="chatguard-app-layout">
@@ -246,7 +244,7 @@ function Chat() {
           </div>
           <div className="sidebar-top">
             <h3>Messages</h3>
-            <button onClick={toggleTheme} className="icon-btn theme-btn" title="Toggle Theme">
+            <button type="button" onClick={toggleTheme} className="icon-btn theme-btn" title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'} aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}>
               {theme === 'light' ? '🌙' : '☀️'}
             </button>
           </div>
@@ -290,6 +288,12 @@ function Chat() {
               <div className="user-info">
                 <span className="username">{user}</span>
                 <span className="status-text">Online</span>
+                {allMessages[user]?.length > 0 && (
+                  <span className="contact-preview" title={allMessages[user][allMessages[user].length - 1].text}>
+                    {allMessages[user][allMessages[user].length - 1].from === myUsername ? 'You: ' : ''}
+                    {allMessages[user][allMessages[user].length - 1].text}
+                  </span>
+                )}
               </div>
             </button>
           ))}
@@ -300,7 +304,7 @@ function Chat() {
       <div className="chatguard-app">
         <header className="chatguard-header">
           {/* Mobile Menu Button */}
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+          <button type="button" className="mobile-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)} aria-label={isSidebarOpen ? "Close contacts sidebar" : "Open contacts sidebar"} aria-expanded={isSidebarOpen}>
             ☰
           </button>
 
@@ -317,7 +321,7 @@ function Chat() {
           ) : (
             <div className="header-content">
               <div className="header-brand-mark" aria-hidden="true">✓</div>
-              <div className="header-text"><h1 className="header-title">SafeChat</h1><p className="header-subtitle">{connectionState === 'connected' ? 'Private conversations, thoughtfully protected' : connectionState === 'connecting' ? 'Connecting securely…' : 'Reconnecting to SafeChat…'}</p></div>
+              <div className="header-text"><h1 className="header-title">SafeChat</h1><p className={`header-subtitle connection-${connectionState}`} role="status">{connectionState === 'connected' ? 'Connected securely' : connectionState === 'connecting' ? 'Connecting securely…' : 'Connection interrupted · Reconnecting…'}</p></div>
             </div>
           )}
         </header>
@@ -368,7 +372,7 @@ function Chat() {
                         
                         <div className="message-meta">
                           <span>{formatTime(msg.timestamp)}</span>
-                          {isMyMessage && <span className="read-receipt">✓✓</span>}
+                          {isMyMessage && <span className="read-receipt" aria-label="Saved by server" title="Sent">✓</span>}
                         </div>
                       </div>
                     </div>
@@ -391,14 +395,14 @@ function Chat() {
 
           {/* Scroll to Bottom Button */}
           {showScrollBtn && (
-            <button className="scroll-bottom-btn" onClick={scrollToBottom}>
+            <button type="button" className="scroll-bottom-btn" onClick={scrollToBottom} aria-label="Scroll to latest messages">
               ↓
             </button>
           )}
 
           <form className="message-input-form" onSubmit={handleSubmit}>
             {/* Placeholder buttons for future features */}
-            <button type="button" className="icon-btn attachment-btn" title="Attach File">📎</button>
+            <button type="button" className="icon-btn attachment-btn" title="File attachments are coming soon" aria-label="File attachments coming soon" disabled>📎</button>
             
             <input
               ref={inputRef}
@@ -410,7 +414,7 @@ function Chat() {
               disabled={!chatWith}
             />
             
-            <button type="button" className="icon-btn emoji-btn" title="Add Emoji">😊</button>
+            <button type="button" className="icon-btn emoji-btn" title="Emoji picker coming soon" aria-label="Emoji picker coming soon" disabled>😊</button>
             
             <button type="submit" className="send-button" disabled={!chatWith || !currentMessage.trim() || connectionState !== 'connected'}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
