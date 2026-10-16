@@ -264,7 +264,7 @@ function Chat() {
             </div>
           ) : (
             <div className="header-content">
-              <h1 className="header-title">ChatGuard</h1>
+              <h1 className="header-title">SafeChat</h1>
             </div>
           )}
         </header>
