@@ -1,34 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from './config';
 import './AdminDashboard.css';
-
-const socket = io('http://localhost:4000');
 
 function AdminDashboard() {
   const [flaggedMessages, setFlaggedMessages] = useState([]);
-  const [filter, setFilter] = useState('all'); // 'all', 'sent', 'received'
+  const [filter, setFilter] = useState('all');
+  const [loadError, setLoadError] = useState('');
+  const token = localStorage.getItem('token');
   const myMobileNumber = localStorage.getItem('mobileNumber');
 
   useEffect(() => {
-    socket.on('adminNotification', (flaggedMessage) => {
-      console.log('Admin received new flagged message:', flaggedMessage);
-      if (flaggedMessage.mobileNumber === myMobileNumber) {
-        setFlaggedMessages((prev) => [flaggedMessage, ...prev]);
-      }
-    });
-    return () => { socket.off('adminNotification'); };
-  }, [myMobileNumber]);
+    let active = true;
 
-  // Dismiss handler (Locally removes from view)
-  const handleDismiss = (indexToRemove) => {
-    setFlaggedMessages((prev) => prev.filter((_, index) => index !== indexToRemove));
+    async function loadAlerts() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/alerts`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json().catch(() => []);
+        if (!response.ok) throw new Error(data.message || 'Could not load alerts');
+        if (active) {
+          setFlaggedMessages(Array.isArray(data) ? data : []);
+          setLoadError('');
+        }
+      } catch (error) {
+        if (active) setLoadError(error.message || 'Could not load alerts');
+      }
+    }
+
+    loadAlerts();
+    const socket = io(API_BASE_URL, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('adminNotification', (alert) => {
+      if (!active) return;
+      setFlaggedMessages((previous) => {
+        if (previous.some((item) => item.id === alert.id)) return previous;
+        return [alert, ...previous];
+      });
+    });
+
+    socket.on('connect_error', (error) => {
+      if (active) setLoadError(error.message || 'Could not connect to alert service');
+    });
+
+    return () => {
+      active = false;
+      socket.disconnect();
+    };
+  }, [token]);
+
+  const handleDismiss = (id) => {
+    setFlaggedMessages((previous) => previous.filter((message) => message.id !== id));
   };
 
-  // Filter logic
-  const filteredMessages = flaggedMessages.filter(msg => {
-    if (filter === 'all') return true;
-    return msg.type === filter;
-  });
+  const filteredMessages = flaggedMessages.filter((message) =>
+    filter === 'all' ? true : message.type === filter
+  );
 
   return (
     <div className="admin-dashboard-container">
@@ -42,27 +73,13 @@ function AdminDashboard() {
         </div>
       </header>
 
-      {/* Filter Controls */}
       <div className="dashboard-controls">
-        <button 
-          className={`filter-btn ${filter === 'all' ? 'active' : ''}`} 
-          onClick={() => setFilter('all')}
-        >
-          All Alerts
-        </button>
-        <button 
-          className={`filter-btn sent ${filter === 'sent' ? 'active' : ''}`} 
-          onClick={() => setFilter('sent')}
-        >
-          Sent (Toxic)
-        </button>
-        <button 
-          className={`filter-btn received ${filter === 'received' ? 'active' : ''}`} 
-          onClick={() => setFilter('received')}
-        >
-          Received (Toxic)
-        </button>
+        <button className={`filter-btn ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All Alerts</button>
+        <button className={`filter-btn sent ${filter === 'sent' ? 'active' : ''}`} onClick={() => setFilter('sent')}>Sent (Toxic)</button>
+        <button className={`filter-btn received ${filter === 'received' ? 'active' : ''}`} onClick={() => setFilter('received')}>Received (Toxic)</button>
       </div>
+
+      {loadError && <p className="error-message" role="alert">{loadError}</p>}
 
       <div className="message-feed">
         {filteredMessages.length === 0 && (
@@ -73,33 +90,24 @@ function AdminDashboard() {
           </div>
         )}
 
-        {filteredMessages.map((msg, index) => (
-          <div key={index} className={`flagged-message-card ${msg.type}`}>
+        {filteredMessages.map((message) => (
+          <div key={message.id} className={`flagged-message-card ${message.type}`}>
             <div className="card-header">
-              <span className={`status-badge ${msg.type}`}>
-                {msg.type === 'received' ? '⚠️ Received' : '🚫 Sent'}
+              <span className={`status-badge ${message.type}`}>
+                {message.type === 'received' ? '⚠️ Received' : '🚫 Sent'}
               </span>
-              <span className="timestamp">
-                {new Date(msg.timestamp).toLocaleString()}
-              </span>
+              <span className="timestamp">{new Date(message.timestamp).toLocaleString()}</span>
             </div>
-            
             <div className="card-body">
               <p className="message-label">Content:</p>
-              <p className="message-text">"{msg.message}"</p>
+              <p className="message-text">"{message.message}"</p>
             </div>
-            
             <div className="card-footer">
               <div className="user-info">
-                <span>Student Involved: <strong>{msg.sender}</strong></span>
+                <span>Student involved: <strong>{message.sender}</strong></span>
+                {message.recipient && <span>Recipient: <strong>{message.recipient}</strong></span>}
               </div>
-              <button 
-                className="dismiss-btn"
-                onClick={() => handleDismiss(index)}
-                title="Dismiss Alert"
-              >
-                Dismiss
-              </button>
+              <button className="dismiss-btn" onClick={() => handleDismiss(message.id)} title="Dismiss alert">Dismiss</button>
             </div>
           </div>
         ))}
