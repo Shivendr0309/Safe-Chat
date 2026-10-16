@@ -1,75 +1,57 @@
 import React, { useState } from 'react';
-import './AdminLogin.css'; // Uses the red-themed CSS
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from './config';
+import './AdminLogin.css';
 
 function AdminLogin({ onLoginSuccess }) {
-  const [isRegister, setIsRegister] = useState(false); // Toggle
+  const [isRegister, setIsRegister] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setSuccess('');
+    setLoading(true);
 
-    // --- SCENARIO 1: PARENT/ADMIN REGISTRATION ---
-    if (isRegister) {
-      try {
-        const response = await fetch('http://localhost:4000/api/register-admin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mobileNumber, password })
-        });
-        const data = await response.text();
-        if (!response.ok) {
-          setError(data); // e.g., "Mobile number already registered"
-        } else {
-          setSuccess('Registration successful! Please login.');
-          setIsRegister(false); // Switch to login form
-          setMobileNumber('');
-          setPassword('');
-        }
-      } catch (err) {
-        setError('Network error. Is the server running?');
-      }
-      return; // Stop here
-    }
-
-    // --- SCENARIO 2: PARENT/ADMIN LOGIN ---
     try {
-      const response = await fetch('http://localhost:4000/api/login', {
+      const endpoint = isRegister ? '/api/register-admin' : '/api/login';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Send mobileNumber for our "smart" login route
-        body: JSON.stringify({ mobileNumber, password })
+        body: JSON.stringify({ mobileNumber: mobileNumber.trim(), password }),
       });
+      const data = await response.json().catch(() => ({}));
 
-      const data = await response.text();
       if (!response.ok) {
-        setError(data); // e.g., "Admin/Parent account not found"
+        setError(data.message || 'Request failed. Please try again.');
         return;
       }
 
-      const jsonData = JSON.parse(data);
-
-      // Check if the server confirmed this is an admin
-      if (!jsonData.isAdmin) {
-        setError('Login failed. This portal is for admins only.');
+      if (isRegister) {
+        setSuccess('Parent account registered. Please log in.');
+        setIsRegister(false);
+        setPassword('');
         return;
       }
-      
-      // Save all data
-      localStorage.setItem('token', jsonData.token);
-      localStorage.setItem('mobileNumber', jsonData.mobileNumber); // <-- KEY for dashboard
-      localStorage.setItem('isAdmin', jsonData.isAdmin);
-      
-      onLoginSuccess(jsonData.isAdmin); // Tell App.js to redirect
 
-    } catch (err) {
-      setError('Network error. Is the server running?');
+      if (!data.isAdmin) {
+        setError('This portal is for parent accounts only.');
+        return;
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('mobileNumber', data.mobileNumber);
+      localStorage.setItem('isAdmin', 'true');
+      onLoginSuccess(true);
+    } catch {
+      setError('Could not reach Safe-Chat. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,50 +60,26 @@ function AdminLogin({ onLoginSuccess }) {
       <div className="login-form-wrapper">
         <header className="login-header admin-header-theme">
           <h1>ChatGuard</h1>
-          <p>{isRegister ? 'Admin/Parent Registration' : 'Admin Portal Login'}</p>
+          <p>{isRegister ? 'Parent Registration' : 'Parent Portal Login'}</p>
         </header>
-        
         <form className="login-form" onSubmit={handleSubmit}>
-          
           <div className="input-group">
             <label htmlFor="mobileNumber">Mobile Number</label>
-            <input
-              id="mobileNumber"
-              type="text"
-              placeholder="Your login ID"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              required
-            />
+            <input id="mobileNumber" type="tel" placeholder="Your login ID" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} autoComplete="tel" required disabled={loading} />
           </div>
-          
           <div className="input-group">
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={8} required disabled={loading} />
           </div>
-
-          {error && <p className="error-message">{error}</p>}
-          {success && <p className="success-message">{success}</p>}
-          
-          <button type="submit" className="login-button admin-button-theme">
-            {isRegister ? 'Register Account' : 'Login'}
+          {error && <p className="error-message" role="alert">{error}</p>}
+          {success && <p className="success-message" role="status">{success}</p>}
+          <button type="submit" className="login-button admin-button-theme" disabled={loading}>
+            {loading ? 'Please wait…' : isRegister ? 'Register Account' : 'Login'}
           </button>
-          
-          <p className="toggle-form" onClick={() => setIsRegister(!isRegister)}>
-            {isRegister
-              ? 'Already have an account? Login'
-              : "New Admin/Parent? Register here"}
-          </p>
-          
-          <p className="toggle-form" onClick={() => navigate('/')}>
-            ← Back to Role Selection
-          </p>
+          <button type="button" className="toggle-form" disabled={loading} onClick={() => { setIsRegister((value) => !value); setError(''); setSuccess(''); }}>
+            {isRegister ? 'Already have an account? Login' : 'New parent? Register here'}
+          </button>
+          <button type="button" className="toggle-form" onClick={() => navigate('/')}>← Back to Role Selection</button>
         </form>
       </div>
     </div>
