@@ -6,6 +6,9 @@ import './AdminDashboard.css';
 function AdminDashboard() {
   const [flaggedMessages, setFlaggedMessages] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [alertSearch, setAlertSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loadError, setLoadError] = useState('');
   const token = localStorage.getItem('token');
   const myMobileNumber = localStorage.getItem('mobileNumber');
