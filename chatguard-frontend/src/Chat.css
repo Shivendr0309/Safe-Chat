@@ -370,3 +370,40 @@
   line-height: 1.6;
   text-align: center;
 }
+
+
+/* Parent linking redesign: make the secure connection flow clear and self-explanatory. */
+.parent-connect-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: linear-gradient(145deg, var(--sidebar-bg), var(--input-bg));
+}
+.parent-connect-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 16%, transparent);
+  border-radius: 13px;
+  background: var(--primary-soft);
+  color: var(--primary-color);
+  font-size: 1.3rem;
+}
+.parent-connect-copy { min-width: 0; }
+.parent-connect-eyebrow { display: block; margin-bottom: 4px; color: var(--primary-color); font-size: .61rem; font-weight: 850; letter-spacing: .12em; }
+.parent-connect-copy > strong { display: block; color: var(--text-color); font-size: .91rem; }
+.parent-connect-copy p { margin: 5px 0 0; color: var(--muted-color); font-size: .75rem; line-height: 1.5; }
+.parent-connect-card > .parent-link-trigger { grid-column: 1 / -1; width: 100%; min-height: 41px; margin: 0; border-radius: 10px; font-weight: 750; }
+.parent-connect-steps { grid-column: 1 / -1; display: grid; gap: 8px; padding-top: 2px; }
+.parent-connect-steps span { display: flex; align-items: center; gap: 9px; color: var(--muted-color); font-size: .72rem; }
+.parent-connect-steps b { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; border: 1px solid var(--border-color); border-radius: 7px; color: var(--primary-color); font-size: .68rem; }
+.parent-connect-card .parent-link-code-panel { grid-column: 1 / -1; display: grid; gap: 9px; margin: 0; padding: 13px; border: 1px solid color-mix(in srgb, var(--primary-color) 22%, var(--border-color)); border-radius: 12px; background: var(--sidebar-bg); }
+.parent-code-label { color: var(--muted-color); font-size: .62rem; font-weight: 850; letter-spacing: .12em; }
+.parent-connect-card .parent-link-code-panel code { display: block; padding: 10px; border-radius: 9px; background: var(--input-bg); color: var(--text-color); font-size: 1.45rem; font-weight: 850; letter-spacing: .18em; text-align: center; }
+.parent-connect-card .parent-link-code-panel p { margin: 0; color: var(--muted-color); font-size: .72rem; line-height: 1.55; }
+.parent-connect-card .parent-link-code-panel button { min-height: 37px; border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent); border-radius: 9px; background: var(--primary-soft); color: var(--primary-color); font-size: .78rem; font-weight: 800; }
