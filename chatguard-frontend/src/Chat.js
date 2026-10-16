@@ -17,6 +17,7 @@ function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [messageSearch, setMessageSearch] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness
   const [connectionState, setConnectionState] = useState('connecting');
   const [chatNotice, setChatNotice] = useState('');
@@ -225,12 +226,23 @@ function Chat() {
     setCurrentMessage('');
   };
 
+  const copyMessage = async (text) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable in this browser.');
+      await navigator.clipboard.writeText(text);
+      setChatNotice('Message copied to clipboard.');
+    } catch {
+      setChatNotice('Could not copy this message. Check browser clipboard permissions.');
+    }
+  };
+
   const formatTime = (dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const currentChatMessages = allMessages[chatWith] || [];
+  const filteredChatMessages = currentChatMessages.filter((message) => !messageSearch.trim() || String(message.text || '').toLowerCase().includes(messageSearch.trim().toLowerCase()));
   const filteredUsers = onlineUsers.filter((user) => user.toLowerCase().includes(searchTerm.trim().toLowerCase()));
 
   return (
@@ -327,6 +339,13 @@ function Chat() {
         </header>
 
         {chatNotice && <div className="chat-notice" role="status"><span>{chatNotice}</span><button type="button" onClick={() => setChatNotice('')} aria-label="Dismiss notification">×</button></div>}
+        {chatWith && (
+          <div className="conversation-tools">
+            <label className="conversation-search-label" htmlFor="conversation-search">Search this conversation</label>
+            <input id="conversation-search" type="search" value={messageSearch} onChange={(event) => setMessageSearch(event.target.value)} placeholder="Find a message…" className="conversation-search" />
+            {messageSearch && <span className="conversation-search-count">{filteredChatMessages.length} match{filteredChatMessages.length === 1 ? '' : 'es'}</span>}
+          </div>
+        )}
         <div 
           className="chat-window" 
           ref={chatWindowRef} 
@@ -342,7 +361,7 @@ function Chat() {
             </div>
           ) : (
             <div className="message-list">
-              {currentChatMessages.map((msg, idx) => {
+              {filteredChatMessages.map((msg, idx) => {
                 // System Messages
                 if (msg.sender === 'system' || msg.sender === 'system-info') {
                   return (
