@@ -214,15 +214,6 @@ app.post('/api/register-admin', authRateLimit, async (req, res) => {
       return res.status(400).json({ message: 'Enter the 8-character parent link code generated from the student account' });
     }
     const codeHash = crypto.createHash('sha256').update(linkCode).digest('hex');
-    const linkedStudent = await User.findOne({
-      parentLinkCodeHash: codeHash,
-      parentLinkCodeExpiresAt: { $gt: new Date() },
-    }).select('+parentLinkCodeHash +parentLinkCodeExpiresAt');
-
-    if (!linkedStudent) {
-      return res.status(400).json({ message: 'That link code is invalid or expired. Ask the student to generate a new code.' });
-    }
-
     const existingAdmin = await Admin.findOne({ mobileNumber }).lean();
     if (existingAdmin) return res.status(409).json({ message: 'A parent account already exists for this mobile number. Sign in, then use Link a student to connect the code.' });
 
@@ -233,6 +224,7 @@ app.post('/api/register-admin', authRateLimit, async (req, res) => {
     let linked = false;
     try {
       await session.withTransaction(async () => {
+        linked = false;
         const student = await User.findOneAndUpdate(
           { parentLinkCodeHash: codeHash, parentLinkCodeExpiresAt: { $gt: new Date() } },
           { $set: { parentLinkCodeHash: null, parentLinkCodeExpiresAt: null } },
