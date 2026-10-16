@@ -207,6 +207,10 @@ function Chat() {
       {/* SIDEBAR */}
       <div className={`online-users-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
+          <div className="brand-lockup">
+            <div className="brand-mark" aria-hidden="true">✓</div>
+            <div><strong>SafeChat</strong><small>Safer conversations</small></div>
+          </div>
           <div className="sidebar-top">
             <h3>Messages</h3>
             <button onClick={toggleTheme} className="icon-btn theme-btn" title="Toggle Theme">
@@ -225,8 +229,13 @@ function Chat() {
         </div>
         
         <div className="users-list">
+          <p className="sidebar-section-label">{searchTerm ? 'SEARCH RESULTS' : 'YOUR CONTACTS'}</p>
           {filteredUsers.length === 0 && (
-            <p className="no-users">No users found</p>
+            <div className="no-users">
+              <div className="empty-contacts-icon">◎</div>
+              <strong>{searchTerm ? 'No matches found' : 'No students online'}</strong>
+              <span>{searchTerm ? 'Try a different username.' : 'When students come online, they’ll appear here.'}</span>
+            </div>
           )}
           {filteredUsers.map((user) => (
             <button
@@ -277,8 +286,10 @@ function Chat() {
           {!chatWith ? (
             <div className="welcome-placeholder">
               <div className="placeholder-icon">👋</div>
-              <h2>Welcome, {myUsername}!</h2>
-              <p>Select a student from the sidebar to start a secure chat.</p>
+              <span className="welcome-eyebrow">WELCOME TO SAFECHAT</span>
+              <h2>Good conversations start here, {myUsername}.</h2>
+              <p>Select a student from your contacts to start a secure, real-time conversation.</p>
+              <div className="welcome-points"><span>✓ Private conversations</span><span>✓ AI-powered safety checks</span></div>
             </div>
           ) : (
             <div className="message-list">
