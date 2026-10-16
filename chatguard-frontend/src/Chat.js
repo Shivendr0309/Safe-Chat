@@ -19,6 +19,8 @@ function Chat() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness
+  const [connectionState, setConnectionState] = useState('connecting');
+  const [chatNotice, setChatNotice] = useState('');
   const typingTimeoutRef = useRef(null);
 
   const messagesEndRef = useRef(null);
@@ -49,22 +51,29 @@ function Chat() {
       transports: ['websocket', 'polling'],
     });
 
+    socketRef.current.on('connect', () => {
+      setConnectionState('connected');
+      setChatNotice('');
+    });
+    socketRef.current.on('disconnect', () => setConnectionState('disconnected'));
     socketRef.current.on('connect_error', (error) => {
-      console.error('Safe-Chat connection failed:', error.message);
+      setConnectionState('disconnected');
+      setChatNotice(error.message || 'Could not connect to SafeChat. Check your connection.');
+      console.error('SafeChat connection failed:', error.message);
     });
 
     socketRef.current.on('chatError', ({ message }) => {
-      window.alert(message || 'Chat action failed.');
+      setChatNotice(message || 'Chat action failed. Please try again.');
     });
 
     socketRef.current.on('moderationUnavailable', ({ message }) => {
-      window.alert(message || 'AI moderation is currently unavailable.');
+      setChatNotice(message || 'AI moderation is temporarily unavailable.');
     });
 
     socketRef.current.on('updateUserList', (users) => {
       const otherUsers = users.filter(user => user !== myUsername);
       setOnlineUsers(otherUsers);
-      setFilteredUsers(otherUsers); // Initialize filtered list
+      setFilteredUsers(otherUsers.filter(user => user.toLowerCase().includes(searchTerm.toLowerCase())));
     });
 
     socketRef.current.on('privateHistoryLoaded', ({ withUser, messages }) => {
@@ -73,10 +82,11 @@ function Chat() {
 
     socketRef.current.on('privateMessage', (message) => {
       const chatPartner = message.from === myUsername ? message.to : message.from;
-      setAllMessages(prev => ({
-        ...prev,
-        [chatPartner]: [...(prev[chatPartner] || []), message]
-      }));
+      setAllMessages(prev => {
+        const existing = prev[chatPartner] || [];
+        if (message.id && existing.some(item => item.id === message.id)) return prev;
+        return { ...prev, [chatPartner]: [...existing, message] };
+      });
       // Stop typing indicator if message received
       if (message.from === chatWithRef.current) setIsTyping(false);
     });
@@ -150,6 +160,7 @@ function Chat() {
   // --- USER INTERACTION ---
   const handleUserClick = (user) => {
     setChatWith(user);
+    setChatNotice('');
     setIsTyping(false);
     socketRef.current?.emit('loadPrivateHistory', { user2: user });
     
@@ -190,6 +201,7 @@ function Chat() {
       timestamp: new Date().toISOString()
     };
 
+    setChatNotice('');
     socketRef.current?.emit('privateMessage', newMessage);
     socketRef.current?.emit('typing', { to: chatWith, isTyping: false }); // Stop typing immediately
     setCurrentMessage('');
@@ -273,11 +285,13 @@ function Chat() {
             </div>
           ) : (
             <div className="header-content">
-              <h1 className="header-title">SafeChat</h1>
+              <div className="header-brand-mark" aria-hidden="true">✓</div>
+              <div className="header-text"><h1 className="header-title">SafeChat</h1><p className="header-subtitle">{connectionState === 'connected' ? 'Private conversations, thoughtfully protected' : connectionState === 'connecting' ? 'Connecting securely…' : 'Reconnecting to SafeChat…'}</p></div>
             </div>
           )}
         </header>
 
+        {chatNotice && <div className="chat-notice" role="status"><span>{chatNotice}</span><button type="button" onClick={() => setChatNotice('')} aria-label="Dismiss notification">×</button></div>}
         <div 
           className="chat-window" 
           ref={chatWindowRef} 
@@ -367,7 +381,7 @@ function Chat() {
             
             <button type="button" className="icon-btn emoji-btn" title="Add Emoji">😊</button>
             
-            <button type="submit" className="send-button" disabled={!chatWith || !currentMessage.trim()}>
+            <button type="submit" className="send-button" disabled={!chatWith || !currentMessage.trim() || connectionState !== 'connected'}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
