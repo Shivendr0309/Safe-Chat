@@ -186,3 +186,41 @@
 .parent-link-code-panel code { color: var(--primary-color); font-size: 1.35rem; font-weight: 800; letter-spacing: .16em; }
 .parent-link-code-panel span { color: var(--muted-color); font-size: .72rem; line-height: 1.5; }
 .parent-link-code-panel button { align-self: stretch; min-height: 33px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--sidebar-bg); color: var(--text-color); font-size: .76rem; font-weight: 700; cursor: pointer; }
+
+
+/* Roadmap phase 1: contact previews, connection clarity, and accessible controls. */
+.contact-preview {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: var(--muted-color);
+  font-size: .73rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-button:focus-visible,
+.icon-btn:focus-visible,
+.mobile-menu-btn:focus-visible,
+.scroll-bottom-btn:focus-visible,
+.send-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+  outline-offset: 3px;
+}
+.icon-btn:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+  transform: none;
+}
+.connection-connected::before {
+  background: #25b57d;
+}
+.connection-connecting::before {
+  background: #d9a441;
+}
+.connection-disconnected::before {
+  background: #d9535f;
+}
+@media (max-width: 767px) {
+  .contact-preview { font-size: .7rem; }
+}
