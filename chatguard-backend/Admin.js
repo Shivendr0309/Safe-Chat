@@ -10,7 +10,8 @@ const adminSchema = new mongoose.Schema({
   password: { 
     type: String, 
     required: true 
-  }
+  },
+  linkedStudentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
 const Admin = mongoose.model('Admin', adminSchema);

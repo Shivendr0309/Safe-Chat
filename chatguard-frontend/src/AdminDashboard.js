@@ -10,6 +10,10 @@ function AdminDashboard() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [linkCode, setLinkCode] = useState('');
+  const [linkingStudent, setLinkingStudent] = useState(false);
+  const [linkNotice, setLinkNotice] = useState('');
+  const [linkError, setLinkError] = useState('');
   const token = localStorage.getItem('token');
   const myMobileNumber = localStorage.getItem('mobileNumber');
 
@@ -56,6 +60,29 @@ function AdminDashboard() {
     };
   }, [token]);
 
+  const linkStudent = async (event) => {
+    event.preventDefault();
+    setLinkingStudent(true);
+    setLinkNotice('');
+    setLinkError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/link-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ linkCode: linkCode.trim().toUpperCase() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not link student.');
+      setLinkNotice(`${data.student?.name || data.student?.username || 'Student'} linked successfully. Refreshing alerts…`);
+      setLinkCode('');
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      setLinkError(error.message || 'Could not link student.');
+    } finally {
+      setLinkingStudent(false);
+    }
+  };
+
   const filteredMessages = flaggedMessages.filter((message) => {
     const matchesDirection = filter === 'all' || message.type === filter;
     const searchable = [message.message, message.sender, message.recipient].filter(Boolean).join(' ').toLowerCase();
@@ -97,6 +124,21 @@ function AdminDashboard() {
           <div className="art-caption"><span className="art-caption-icon">✓</span><span><strong>Your family, in focus</strong><small>Safety insights in one place</small></span></div>
         </div>
         <div className="alerts-total"><span className="total-icon">↗</span><span><small>Total flagged alerts</small><strong>{flaggedMessages.length}</strong></span></div>
+      </section>
+
+      <section className="parent-link-section" aria-labelledby="parent-link-heading">
+        <div>
+          <div className="dashboard-eyebrow">FAMILY CONNECTION</div>
+          <h2 id="parent-link-heading">Link a student</h2>
+          <p>Ask the student to generate a one-time code in SafeChat. The code expires after 15 minutes and can be used once.</p>
+        </div>
+        <form className="parent-link-form" onSubmit={linkStudent}>
+          <label htmlFor="parent-student-link-code">Student link code</label>
+          <input id="parent-student-link-code" value={linkCode} onChange={(event) => setLinkCode(event.target.value.toUpperCase())} placeholder="Enter 8-character code" minLength={8} maxLength={8} pattern="[A-Fa-f0-9]{8}" autoComplete="one-time-code" required />
+          <button type="submit" disabled={linkingStudent || linkCode.trim().length !== 8}>{linkingStudent ? 'Linking…' : 'Link student'}</button>
+        </form>
+        {linkNotice && <p className="parent-link-success" role="status">{linkNotice}</p>}
+        {linkError && <p className="parent-link-error" role="alert">{linkError}</p>}
       </section>
 
       <section className="alerts-section">

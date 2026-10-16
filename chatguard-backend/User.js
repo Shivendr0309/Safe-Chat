@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean, 
     default: false 
   },
+  linkedParentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Admin' }],
   parentLinkCodeHash: { type: String, default: null, select: false },
   parentLinkCodeExpiresAt: { type: Date, default: null, select: false }
 });
