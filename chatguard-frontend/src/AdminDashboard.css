@@ -146,3 +146,51 @@
   .admin-dashboard-container .user-info { gap: 16px; }
   .privacy-note { text-align: center; line-height: 1.6; }
 }
+
+
+/* Layout hardening: keep the dashboard full-width and avoid oversized decorative art. */
+#root { width: 100%; min-height: 100vh; }
+.admin-dashboard-container {
+  display: block;
+  width: min(1180px, calc(100% - 48px));
+  max-width: 1180px;
+  min-width: 0;
+  margin-inline: auto;
+  font-size: 16px;
+}
+.admin-welcome {
+  width: 100%;
+  min-width: 0;
+  min-height: 245px;
+  padding: 38px 40px;
+  padding-right: 280px;
+  align-items: center;
+}
+.welcome-copy { width: 100%; max-width: 590px; }
+.welcome-art {
+  width: 220px;
+  height: 190px;
+  right: 32px;
+  top: 28px;
+  transform: scale(.82);
+  transform-origin: center;
+  pointer-events: none;
+}
+.shield-illustration,
+.shield-illustration svg {
+  width: 68px !important;
+  height: 76px !important;
+  max-width: 68px !important;
+  max-height: 76px !important;
+}
+.alerts-total { z-index: 3; }
+.alerts-section { width: 100%; min-width: 0; }
+@media (max-width: 850px) {
+  .admin-welcome { padding-right: 220px; }
+  .welcome-art { right: 4px; transform: scale(.7); opacity: .35; }
+}
+@media (max-width: 640px) {
+  .admin-dashboard-container { width: calc(100% - 28px); }
+  .admin-welcome { padding: 76px 22px 24px; }
+  .welcome-art { display: none; }
+}
