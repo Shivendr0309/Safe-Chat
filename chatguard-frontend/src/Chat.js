@@ -391,7 +391,10 @@ function Chat() {
                         
                         <div className="message-meta">
                           <span>{formatTime(msg.timestamp)}</span>
+                          {msg.moderationStatus === 'unavailable' && <span className="moderation-unavailable" title="AI moderation could not classify this message">Safety check unavailable</span>}
+                          {msg.isFlagged && <span className="moderation-status-label">Flagged for review</span>}
                           {isMyMessage && <span className="read-receipt" aria-label="Saved by server" title="Sent">✓</span>}
+                          <button type="button" className="message-copy-btn" onClick={() => copyMessage(msg.text || '')} aria-label="Copy message" title="Copy message">Copy</button>
                         </div>
                       </div>
                     </div>
