@@ -201,6 +201,7 @@ app.post('/api/register-admin', authRateLimit, async (req, res) => {
   try {
     const mobileNumber = String(req.body.mobileNumber || '').trim();
     const password = String(req.body.password || '');
+    const linkCode = String(req.body.linkCode || '').trim().toUpperCase();
 
     if (!/^\+?[0-9]{10,15}$/.test(mobileNumber)) {
       return res.status(400).json({ message: 'Enter a valid mobile number' });
