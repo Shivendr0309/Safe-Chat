@@ -21,6 +21,8 @@ function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // For mobile responsiveness
   const [connectionState, setConnectionState] = useState('connecting');
   const [chatNotice, setChatNotice] = useState('');
+  const [parentLinkCode, setParentLinkCode] = useState('');
+  const [generatingLinkCode, setGeneratingLinkCode] = useState(false);
   const typingTimeoutRef = useRef(null);
 
   const messagesEndRef = useRef(null);
@@ -173,6 +175,25 @@ function Chat() {
     }, 100);
   };
 
+  const generateParentLinkCode = async () => {
+    setGeneratingLinkCode(true);
+    setParentLinkCode('');
+    setChatNotice('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/parent-link-code`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not create a parent link code.');
+      setParentLinkCode(data.code);
+    } catch (error) {
+      setChatNotice(error.message || 'Could not create a parent link code.');
+    } finally {
+      setGeneratingLinkCode(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     setCurrentMessage(e.target.value);
 
@@ -233,11 +254,21 @@ function Chat() {
           {/* SEARCH BAR */}
           <input 
             type="text" 
-            placeholder="Search users..." 
+            placeholder="Search students..." 
             className="search-bar" 
             value={searchTerm}
             onChange={handleSearch}
+            aria-label="Search online students"
           />
+          <button type="button" className="parent-link-trigger" onClick={generateParentLinkCode} disabled={generatingLinkCode}>
+            {generatingLinkCode ? 'Creating code…' : '＋ Link a parent'}
+          </button>
+          {parentLinkCode && <div className="parent-link-code-panel" role="status">
+            <strong>Parent link code</strong>
+            <code>{parentLinkCode}</code>
+            <span>Share privately with your parent. Expires in 15 minutes and works once.</span>
+            <button type="button" onClick={() => { navigator.clipboard?.writeText(parentLinkCode); }}>Copy code</button>
+          </div>}
         </div>
         
         <div className="users-list">
