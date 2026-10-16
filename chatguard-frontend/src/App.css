@@ -1,37 +1,40 @@
-/* You can delete all the default 'App.css' styles if you want */
-
 .app-nav {
   position: fixed;
-  top: 10px;
-  right: 20px;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 8px 15px;
-  border-radius: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  top: 16px;
+  right: 18px;
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid rgba(228, 232, 241, .9);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 8px 28px rgba(29, 42, 78, .1);
+  backdrop-filter: blur(14px);
 }
-
 .app-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 13px;
+  margin: 0;
+  border-radius: 9px;
+  color: #4b5872;
   text-decoration: none;
-  color: #007bff;
-  font-weight: 600;
-  font-size: 0.9rem;
-  font-family: 'Inter', sans-serif;
-  margin: 0 10px;
+  font-size: .88rem;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease;
 }
-
-.app-nav a:hover {
-  text-decoration: underline;
+.app-nav a:hover, .app-nav a.active {
+  background: #eef2ff;
+  color: #4338ca;
+  text-decoration: none;
 }
-
-/* This makes sure our chat app doesn't get hidden under the nav */
-.chatguard-app {
-  margin-top: 40px; 
-}
-.app-nav a.active {
-  background-color: #e7f3ff; /* Light blue background */
-  color: #007bff;
-  font-weight: bold;
-  cursor: default; /* Show default cursor to indicate it's not clickable */
-  pointer-events: none; /* Optional: disable clicking */
+.app-nav .logout-btn { color: #b42336; }
+.app-nav .logout-btn:hover { background: #fff1f2; color: #9f1239; }
+.chatguard-app { margin-top: 0; }
+@media (max-width: 640px) {
+  .app-nav { top: auto; right: 12px; bottom: 12px; left: 12px; justify-content: center; }
+  .app-nav a { flex: 1; justify-content: center; padding: 0 8px; }
 }
