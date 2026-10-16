@@ -224,3 +224,64 @@
 @media (max-width: 767px) {
   .contact-preview { font-size: .7rem; }
 }
+
+
+/* Conversation search and safety status */
+.conversation-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--sidebar-bg);
+}
+.conversation-search-label {
+  flex: 0 0 auto;
+  color: var(--muted-color);
+  font-size: .76rem;
+  font-weight: 700;
+}
+.conversation-search {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  outline: none;
+  background: var(--input-bg);
+  color: var(--text-color);
+  font-size: .85rem;
+}
+.conversation-search:focus-visible {
+  border-color: var(--primary-color);
+  outline: 3px solid color-mix(in srgb, var(--primary-color) 22%, transparent);
+}
+.conversation-search-count { color: var(--muted-color); font-size: .74rem; white-space: nowrap; }
+.message-meta { flex-wrap: wrap; }
+.message-copy-btn {
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: .68rem;
+  opacity: .68;
+  cursor: pointer;
+}
+.message-copy-btn:hover, .message-copy-btn:focus-visible { background: rgba(8,126,104,.1); opacity: 1; }
+.moderation-unavailable, .moderation-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .67rem;
+  font-weight: 700;
+}
+.moderation-unavailable { color: #a86a19; }
+.moderation-status-label { color: #b34d3e; }
+@media (max-width: 767px) {
+  .conversation-tools { flex-wrap: wrap; gap: 7px; padding: 9px 12px; }
+  .conversation-search-label { width: 100%; }
+  .conversation-search { flex-basis: 100%; min-height: 42px; font-size: 16px; }
+  .conversation-search-count { margin-left: auto; }
+}
