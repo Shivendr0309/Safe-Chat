@@ -24,7 +24,9 @@ const userSchema = new mongoose.Schema({
   isAdmin: { 
     type: Boolean, 
     default: false 
-  }
+  },
+  parentLinkCodeHash: { type: String, default: null, select: false },
+  parentLinkCodeExpiresAt: { type: Date, default: null, select: false }
 });
 
 const User = mongoose.model('User', userSchema);
