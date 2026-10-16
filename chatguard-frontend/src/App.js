@@ -13,6 +13,7 @@ import './App.css';
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,12 +38,15 @@ function AppContent() {
 
   const handleLogout = (e) => {
     e.preventDefault();
-    if (window.confirm('Are you sure you want to logout?')) {
-      localStorage.clear();
-      setIsLoggedIn(false);
-      setIsAdmin(false);
-      navigate('/');
-    }
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    localStorage.clear();
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    setShowLogoutConfirm(false);
+    navigate('/');
   };
 
   return (
@@ -57,6 +61,41 @@ function AppContent() {
           )}
           <a href="/" onClick={handleLogout} className="logout-btn">Logout</a>
         </nav>
+      )}
+
+      {showLogoutConfirm && (
+        <div
+          className="sc-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowLogoutConfirm(false);
+          }}
+        >
+          <section
+            className="sc-confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-dialog-title"
+            aria-describedby="logout-dialog-description"
+          >
+            <div className="sc-modal-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M10 4H5.8A1.8 1.8 0 0 0 4 5.8v12.4A1.8 1.8 0 0 0 5.8 20H10M14 16l4-4-4-4M18 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="sc-modal-copy">
+              <span className="sc-modal-eyebrow">SAFECHAT ACCOUNT</span>
+              <h2 id="logout-dialog-title">Ready to sign out?</h2>
+              <p id="logout-dialog-description">You’ll be signed out of this device. You can log back in whenever you’re ready.</p>
+            </div>
+            <div className="sc-modal-actions">
+              <button type="button" className="sc-modal-cancel" onClick={() => setShowLogoutConfirm(false)}>Stay signed in</button>
+              <button type="button" className="sc-modal-confirm" onClick={confirmLogout}>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 4H5.8A1.8 1.8 0 0 0 4 5.8v12.4A1.8 1.8 0 0 0 5.8 20H10M14 16l4-4-4-4M18 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                Sign out
+              </button>
+            </div>
+          </section>
+        </div>
       )}
 
       <Routes>
