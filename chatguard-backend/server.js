@@ -15,6 +15,29 @@ const Admin = require('./Admin');
 const app = express();
 const server = http.createServer(app);
 
+// Small per-process rate limiter. For multi-instance production deployments,
+// replace this with a shared store such as Redis.
+const rateBuckets = new Map();
+function rateLimit({ windowMs = 60_000, max = 30, key = (req) => req.ip } = {}) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const bucketKey = key(req);
+    let bucket = rateBuckets.get(bucketKey);
+    if (!bucket || now >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      rateBuckets.set(bucketKey, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      res.set('Retry-After', String(Math.ceil((bucket.resetAt - now) / 1000)));
+      return res.status(429).json({ message: 'Too many requests. Please wait and try again.' });
+    }
+    return next();
+  };
+}
+const authRateLimit = rateLimit({ windowMs: 15 * 60_000, max: 12 });
+const apiRateLimit = rateLimit({ windowMs: 60_000, max: 120 });
+
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
@@ -36,6 +59,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '20kb' }));
+app.use('/api', apiRateLimit);
 
 const io = new Server(server, {
   cors: {
@@ -101,7 +125,7 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.post('/api/register-student', async (req, res) => {
+app.post('/api/register-student', authRateLimit, async (req, res) => {
   try {
     const username = String(req.body.username || '').trim();
     const name = String(req.body.name || '').trim();
@@ -154,7 +178,7 @@ app.post('/api/register-student', async (req, res) => {
   }
 });
 
-app.post('/api/register-admin', async (req, res) => {
+app.post('/api/register-admin', authRateLimit, async (req, res) => {
   try {
     const mobileNumber = String(req.body.mobileNumber || '').trim();
     const password = String(req.body.password || '');
@@ -181,7 +205,7 @@ app.post('/api/register-admin', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authRateLimit, async (req, res) => {
   try {
     const password = String(req.body.password || '');
     if (!password) return res.status(400).json({ message: 'Password is required' });
@@ -347,7 +371,7 @@ io.on('connection', (socket) => {
 
       socket.emit('privateHistoryLoaded', {
         withUser: user2,
-        messages: history.map((message) => ({
+        messages: history.reverse().map((message) => ({
           id: String(message._id),
           text: message.text,
           from: message.from,
@@ -363,8 +387,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  let messageWindowStart = Date.now();
+  let messageWindowCount = 0;
   socket.on('privateMessage', async (data = {}) => {
     if (identity.isAdmin || !identity.username) return;
+    const now = Date.now();
+    if (now - messageWindowStart >= 60_000) {
+      messageWindowStart = now;
+      messageWindowCount = 0;
+    }
+    messageWindowCount += 1;
+    if (messageWindowCount > 30) {
+      socket.emit('chatError', { message: 'You are sending messages too quickly. Please wait a moment.' });
+      return;
+    }
     const text = typeof data.text === 'string' ? data.text.trim() : '';
     const to = typeof data.to === 'string' ? data.to.trim() : '';
 
@@ -400,6 +436,7 @@ io.on('connection', (socket) => {
       const recipientSocketId = userSocketMap.get(to);
       if (recipientSocketId) io.to(recipientSocketId).emit('privateMessage', message);
       socket.emit('privateMessage', message);
+      socket.emit('messageSent', { id: message.id, timestamp: message.timestamp, moderationStatus: message.moderationStatus });
 
       if (saved.isFlagged) {
         sendParentAlert(identity.mobileNumber, saved, 'sent');
