@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: safechat-moderation
+    runtime: python
+    rootDir: moderation-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MODERATION_API_KEY
+        sync: false
+      - key: DETOXIFY_MODEL
+        value: original
+      - key: TOXICITY_THRESHOLD
+        value: "0.70"
+      - key: SEVERE_TOXICITY_THRESHOLD
+        value: "0.50"
+      - key: THREAT_THRESHOLD
+        value: "0.50"
+      - key: INSULT_THRESHOLD
+        value: "0.75"
+      - key: IDENTITY_ATTACK_THRESHOLD
+        value: "0.60"
+      - key: OBSCENE_THRESHOLD
+        value: "0.80"
+      - key: SEXUAL_EXPLICIT_THRESHOLD
+        value: "0.80"
