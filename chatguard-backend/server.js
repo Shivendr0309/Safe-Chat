@@ -186,11 +186,12 @@ app.post('/api/parent-link-code', authenticateHttp, async (req, res) => {
     }
     const code = crypto.randomBytes(4).toString('hex').toUpperCase();
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await User.findOneAndUpdate(
       { username: req.auth.username },
-      { parentLinkCodeHash: codeHash, parentLinkCodeExpiresAt: new Date(Date.now() + 15 * 60 * 1000) }
+      { parentLinkCodeHash: codeHash, parentLinkCodeExpiresAt: expiresAt }
     );
-    return res.json({ code, expiresInSeconds: 900, message: 'Share this code privately with your parent. It can be used once.' });
+    return res.json({ code, expiresInSeconds: 900, expiresAt: expiresAt.toISOString(), message: 'Share this code privately with your parent. It can be used once.' });
   } catch (error) {
     console.error('Creating parent link code failed:', error.message);
     return res.status(500).json({ message: 'Could not create a parent link code' });
@@ -208,6 +209,19 @@ app.post('/api/register-admin', authRateLimit, async (req, res) => {
     }
     if (password.length < 8 || password.length > 128) {
       return res.status(400).json({ message: 'Password must contain at least 8 characters' });
+    }
+
+    if (!linkCode) {
+      const existingParent = await Admin.findOne({ mobileNumber }).lean();
+      if (existingParent) {
+        return res.status(409).json({ message: 'A parent account already exists for this mobile number. Sign in, then use Connect a student account on your dashboard.' });
+      }
+      await Admin.create({
+        mobileNumber,
+        password: await bcrypt.hash(password, 12),
+        linkedStudentIds: [],
+      });
+      return res.status(201).json({ message: 'Parent account created. Sign in, then connect a student from your dashboard.' });
     }
 
     if (!/^[A-F0-9]{8}$/.test(linkCode)) {

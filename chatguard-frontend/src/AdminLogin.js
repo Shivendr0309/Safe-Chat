@@ -6,8 +6,8 @@ import './AdminLogin.css';
 function AdminLogin({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
-  const [linkCode, setLinkCode] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,13 +17,17 @@ function AdminLogin({ onLoginSuccess }) {
     event.preventDefault();
     setError('');
     setSuccess('');
+    if (isRegister && password !== confirmPassword) {
+      setError('Passwords do not match. Please enter the same password in both fields.');
+      return;
+    }
     setLoading(true);
     try {
       const endpoint = isRegister ? '/api/register-admin' : '/api/login';
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: mobileNumber.trim(), password, ...(isRegister ? { linkCode: linkCode.trim().toUpperCase() } : {}) }),
+        body: JSON.stringify({ mobileNumber: mobileNumber.trim(), password }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -31,10 +35,10 @@ function AdminLogin({ onLoginSuccess }) {
         return;
       }
       if (isRegister) {
-        setSuccess('Parent account created and linked to the student. Please sign in to continue.');
+        setSuccess('Parent account created. Please sign in, then connect a student from your dashboard.');
         setIsRegister(false);
         setPassword('');
-        setLinkCode('');
+        setConfirmPassword('');
         return;
       }
       if (!data.isAdmin) {
@@ -67,16 +71,17 @@ function AdminLogin({ onLoginSuccess }) {
       <section className="auth-panel">
         <div className="auth-mobile-brand"><span className="auth-brand-mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 7v8c0 7-4.7 11.4-11 14C9.7 26.4 5 22 5 15V7l11-4Z" fill="none" stroke="currentColor" strokeWidth="2.2"/><path d="m11 16 3.2 3.2L21.5 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg></span>safechat<span className="auth-brand-period">.</span></div>
         <div className="auth-form-wrap">
-          <div className="auth-form-heading"><span className="auth-step-label">{isRegister ? 'JOIN THE PARENT PORTAL' : 'PARENT ACCESS'}</span><h2>{isRegister ? 'Let’s stay connected.' : 'Welcome back.'}</h2><p>{isRegister ? 'Create your parent account with your own mobile number, then link the student using their one-time code.' : 'Sign in to review safety updates and support your child.'}</p></div>
+          <div className="auth-form-heading"><span className="auth-step-label">{isRegister ? 'JOIN THE PARENT PORTAL' : 'PARENT ACCESS'}</span><h2>{isRegister ? 'Let’s get started.' : 'Welcome back.'}</h2><p>{isRegister ? 'Create your own parent account first. You can securely connect a student after signing in.' : 'Sign in to review safety updates and support your child.'}</p></div>
           <div className="auth-mode-switch" role="group" aria-label="Account action"><button type="button" className={!isRegister ? 'active' : ''} onClick={() => { setIsRegister(false); setError(''); setSuccess(''); }} disabled={loading}>Sign in</button><button type="button" className={isRegister ? 'active' : ''} onClick={() => { setIsRegister(true); setError(''); setSuccess(''); }} disabled={loading}>Create account</button></div>
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-field"><label htmlFor="parent-mobile-number">{isRegister ? "Your mobile number" : "Mobile number"}</label><input id="parent-mobile-number" type="tel" placeholder={isRegister ? "Enter your own mobile number" : "Enter your registered mobile number"} value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} autoComplete="tel" required disabled={loading} /></div>
-            {isRegister && <div className="auth-field"><label htmlFor="parent-link-code">Student-generated link code</label><input id="parent-link-code" type="text" placeholder="e.g. 7A2F91BC" value={linkCode} onChange={e => setLinkCode(e.target.value.toUpperCase())} minLength={8} maxLength={8} pattern="[A-Fa-f0-9]{8}" autoComplete="one-time-code" required disabled={loading} /><span className="auth-field-hint">Ask the student to open SafeChat → Connect a parent → Create link code. It expires in 15 minutes and works once. Your mobile number can be different from the student’s.</span></div>}
             <div className="auth-field"><div className="auth-label-row"><label htmlFor="parent-password">Password</label><span className="auth-inline-note">{isRegister ? '8+ characters' : 'Keep it private'}</span></div><input id="parent-password" type="password" placeholder={isRegister ? 'Create a strong password' : 'Enter your password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={8} required disabled={loading} /></div>
+            {isRegister && <div className="auth-field"><label htmlFor="parent-confirm-password">Confirm password</label><input id="parent-confirm-password" type="password" placeholder="Enter your password again" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={8} required disabled={loading} /></div>}
             {error && <div className="auth-notice error" role="alert">! <span>{error}</span></div>}
             {success && <div className="auth-notice success" role="status">✓ <span>{success}</span></div>}
             <button className="auth-submit auth-submit-parent" type="submit" disabled={loading}>{loading ? <><span className="auth-spinner" /> Please wait…</> : <>{isRegister ? 'Create parent account' : 'Open safety dashboard'} <span aria-hidden="true">↗</span></>}</button>
           </form>
+          {isRegister && <p className="auth-field-hint parent-registration-hint">After creating your account, sign in and use <strong>Connect a student account</strong> on your dashboard. The student’s one-time code is available in their SafeChat Settings.</p>}
           <div className="auth-divider"><span>OR</span></div>
           <button type="button" className="auth-alternate-link auth-back-link" onClick={() => navigate('/')}><span className="auth-alternate-icon">←</span><span><strong>Back to SafeChat</strong><small>Choose another way to sign in</small></span><span className="auth-link-arrow">→</span></button>
           <p className="auth-legal">Safety works best when it starts with trust and conversation.</p>

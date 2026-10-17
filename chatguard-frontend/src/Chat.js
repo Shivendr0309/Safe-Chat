@@ -22,6 +22,8 @@ function Chat() {
   const [connectionState, setConnectionState] = useState('connecting');
   const [chatNotice, setChatNotice] = useState('');
   const [parentLinkCode, setParentLinkCode] = useState('');
+  const [parentLinkExpiresAt, setParentLinkExpiresAt] = useState(null);
+  const [linkCodeRemainingSeconds, setLinkCodeRemainingSeconds] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(localStorage.getItem('safechat-notifications') === 'true');
   const notificationsEnabledRef = useRef(notificationsEnabled);
@@ -206,9 +208,22 @@ function Chat() {
     }
   };
 
+  useEffect(() => {
+    if (!parentLinkExpiresAt) return undefined;
+    const updateRemaining = () => {
+      const remaining = Math.max(0, Math.ceil((new Date(parentLinkExpiresAt).getTime() - Date.now()) / 1000));
+      setLinkCodeRemainingSeconds(remaining);
+    };
+    updateRemaining();
+    const intervalId = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [parentLinkExpiresAt]);
+
   const generateParentLinkCode = async () => {
     setGeneratingLinkCode(true);
     setParentLinkCode('');
+    setParentLinkExpiresAt(null);
+    setLinkCodeRemainingSeconds(0);
     setChatNotice('');
     try {
       const response = await fetch(`${API_BASE_URL}/api/parent-link-code`, {
@@ -218,6 +233,9 @@ function Chat() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'Could not create a parent link code.');
       setParentLinkCode(data.code);
+      const expiresAt = data.expiresAt || new Date(Date.now() + (data.expiresInSeconds || 900) * 1000).toISOString();
+      setParentLinkExpiresAt(expiresAt);
+      setLinkCodeRemainingSeconds(Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000)));
       setLinkCodeCopied(false);
     } catch (error) {
       setChatNotice(error.message || 'Could not create a parent link code.');
@@ -227,6 +245,10 @@ function Chat() {
   };
 
   const copyParentLinkCode = async () => {
+    if (linkCodeRemainingSeconds <= 0) {
+      setChatNotice('This code has expired. Generate a new code to connect your parent.');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(parentLinkCode);
       setLinkCodeCopied(true);
@@ -301,6 +323,33 @@ function Chat() {
             <p className="settings-description">Manage your local SafeChat preferences.</p>
             <div className="settings-account-row"><span>Username</span><strong>{myUsername || 'Student'}</strong></div>
             <div className="settings-account-row"><span>Parent contact number</span><strong>{myMobileNumber || 'Not provided'}</strong></div>
+            <section className="parent-connect-card settings-parent-connect" aria-labelledby="parent-connect-title">
+              <div className="parent-connect-icon" aria-hidden="true">♧</div>
+              <div className="parent-connect-copy">
+                <span className="parent-connect-eyebrow">FAMILY CONNECTION</span>
+                <strong id="parent-connect-title">Connect a parent</strong>
+                <p>Generate a temporary code for your parent to link their account and receive safety alerts.</p>
+              </div>
+              <button type="button" className="parent-link-trigger" onClick={generateParentLinkCode} disabled={generatingLinkCode}>
+                {generatingLinkCode ? 'Creating code…' : parentLinkCode ? 'Generate new code' : 'Create link code'}
+              </button>
+              {parentLinkCode ? (
+                <div className="parent-link-code-panel" role="status">
+                  <span className="parent-code-label">YOUR ONE-TIME CODE</span>
+                  {linkCodeRemainingSeconds > 0 ? <code>{parentLinkCode}</code> : <strong>This code has expired.</strong>}
+                  <p>{linkCodeRemainingSeconds > 0
+                    ? <>Expires at {new Date(parentLinkExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · {Math.floor(linkCodeRemainingSeconds / 60)}:{String(linkCodeRemainingSeconds % 60).padStart(2, '0')} remaining. Share it privately; it works once.</>
+                    : 'Generate a new code to continue. Expired codes cannot be used.'}</p>
+                  {linkCodeRemainingSeconds > 0 && <button type="button" onClick={copyParentLinkCode}>{linkCodeCopied ? '✓ Copied' : 'Copy code'}</button>}
+                </div>
+              ) : (
+                <div className="parent-connect-steps">
+                  <span><b>1</b> Create a code here in Settings</span>
+                  <span><b>2</b> Share it privately with your parent</span>
+                  <span><b>3</b> Parent signs in and links your account</span>
+                </div>
+              )}
+            </section>
             <div className="settings-preference">
               <span><strong>Desktop notifications</strong><small>Show new-message alerts while SafeChat is in the background.</small></span>
               <input type="checkbox" checked={notificationsEnabled} onChange={(event) => handleNotificationPreference(event.target.checked)} aria-label="Enable desktop notifications" />
@@ -339,31 +388,6 @@ function Chat() {
             onChange={handleSearch}
             aria-label="Search online students"
           />
-          <section className="parent-connect-card" aria-labelledby="parent-connect-title">
-            <div className="parent-connect-icon" aria-hidden="true">♧</div>
-            <div className="parent-connect-copy">
-              <span className="parent-connect-eyebrow">FAMILY CONNECTION</span>
-              <strong id="parent-connect-title">Connect a parent</strong>
-              <p>Give your parent secure access to safety alerts for your account.</p>
-            </div>
-            <button type="button" className="parent-link-trigger" onClick={generateParentLinkCode} disabled={generatingLinkCode}>
-              {generatingLinkCode ? 'Creating code…' : parentLinkCode ? 'Generate new code' : 'Create link code'}
-            </button>
-            {parentLinkCode ? (
-              <div className="parent-link-code-panel" role="status">
-                <span className="parent-code-label">YOUR ONE-TIME CODE</span>
-                <code>{parentLinkCode}</code>
-                <p>Ask your parent to sign in or create an account, then enter this code in the parent dashboard. It expires in 15 minutes and can be used once.</p>
-                <button type="button" onClick={copyParentLinkCode}>{linkCodeCopied ? '✓ Copied' : 'Copy code'}</button>
-              </div>
-            ) : (
-              <div className="parent-connect-steps">
-                <span><b>1</b> Generate a code</span>
-                <span><b>2</b> Share it privately</span>
-                <span><b>3</b> Parent links their account</span>
-              </div>
-            )}
-          </section>
         </div>
         
         <div className="users-list">
