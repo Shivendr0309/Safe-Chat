@@ -37,3 +37,15 @@ jobs:
       - run: node --check server.js
       - run: node --check User.js
       - run: node --check Admin.js
+
+  moderation-syntax:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: moderation-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m py_compile main.py
