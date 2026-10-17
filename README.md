@@ -80,7 +80,7 @@ For production, set `REACT_APP_API_URL` to the HTTPS URL of the deployed backend
 
 ## Deploy
 
-- Deploy `moderation-service/` as a Python web service first. In Render, use its `render.yaml` blueprint or set the root directory to `moderation-service`, build command `pip install -r requirements.txt`, and start command `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+- Deploy `moderation-service/` as a Python web service first. In Render, create a Blueprint from the repository-root `render.yaml` (it configures `moderation-service` as the service root), or configure root directory `moderation-service`, build command `pip install -r requirements.txt`, and start command `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 - Set a strong random `MODERATION_API_KEY` secret on the Python service. Keep it private; the service requires it as a Bearer token for every `/moderate` request.
 - Deploy `chatguard-backend/` as a Node web service and set `MODERATION_API_URL` to the Python service base URL, the same `MODERATION_API_KEY`, and `MODERATION_TIMEOUT_MS=8000` in the backend environment.
 - Build and deploy `chatguard-frontend/` to Vercel (or another static host).
