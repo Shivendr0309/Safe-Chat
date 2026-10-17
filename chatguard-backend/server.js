@@ -8,7 +8,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
-const { HfInference } = require('@huggingface/inference');
 
 const User = require('./User');
 const Admin = require('./Admin');
@@ -42,8 +41,10 @@ const apiRateLimit = rateLimit({ windowMs: 60_000, max: 120 });
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const MONGO_URI = process.env.MONGO_URI;
-const MODEL_TO_USE = process.env.HF_MODEL || 'KoalaAI/Text-Moderation';
-const hf = process.env.HF_TOKEN ? new HfInference(process.env.HF_TOKEN) : null;
+const MODERATION_API_URL = (process.env.MODERATION_API_URL || '').replace(/\/+$/, '');
+const MODERATION_API_KEY = process.env.MODERATION_API_KEY || '';
+const MODERATION_TIMEOUT_MS = Number(process.env.MODERATION_TIMEOUT_MS || 8000);
+const moderationConfigured = Boolean(MODERATION_API_URL && MODERATION_API_KEY);
 
 const allowedOrigins = (process.env.CLIENT_ORIGINS ||
   'http://localhost:3000,https://shivendr0309.github.io')
@@ -122,7 +123,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: mongoose.connection.readyState === 1 ? 'ok' : 'degraded',
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    moderation: hf ? 'configured' : 'not-configured',
+    moderation: moderationConfigured ? 'configured' : 'not-configured',
   });
 });
 
@@ -431,22 +432,33 @@ app.get('/api/admin/alerts', authenticateHttp, requireAdmin, async (req, res) =>
 });
 
 async function analyzeMessage(text) {
-  if (!hf) return { isFlagged: false, status: 'unavailable' };
+  if (!moderationConfigured) return { isFlagged: false, status: 'unavailable' };
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), MODERATION_TIMEOUT_MS);
   try {
-    const result = await hf.textClassification({ model: MODEL_TO_USE, inputs: text });
-    const scores = Array.isArray(result?.[0]) ? result[0] : result;
-    if (!Array.isArray(scores) || scores.length === 0) {
-      return { isFlagged: false, status: 'unavailable' };
+    const response = await fetch(`${MODERATION_API_URL}/moderate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${MODERATION_API_KEY}`,
+      },
+      body: JSON.stringify({ text }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Moderation service returned HTTP ${response.status}`);
     }
-    const top = scores.reduce((best, item) => item.score > best.score ? item : best);
-    return {
-      isFlagged: String(top.label || '').toUpperCase() !== 'OK',
-      status: 'complete',
-    };
+    const result = await response.json();
+    if (typeof result?.isFlagged !== 'boolean' || !result?.scores || typeof result.scores !== 'object') {
+      throw new Error('Moderation service returned an invalid response');
+    }
+    return { isFlagged: result.isFlagged, status: 'complete', scores: result.scores };
   } catch (error) {
-    console.error('AI moderation failed:', error.message);
+    console.error('AI moderation failed:', error.name === 'AbortError' ? 'request timed out' : error.message);
     return { isFlagged: false, status: 'unavailable' };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
