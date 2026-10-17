@@ -7,6 +7,7 @@ function AdminLogin({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,10 @@ function AdminLogin({ onLoginSuccess }) {
     event.preventDefault();
     setError('');
     setSuccess('');
+    if (isRegister && password !== confirmPassword) {
+      setError('Passwords do not match. Please enter the same password in both fields.');
+      return;
+    }
     setLoading(true);
     try {
       const endpoint = isRegister ? '/api/register-admin' : '/api/login';
@@ -33,6 +38,7 @@ function AdminLogin({ onLoginSuccess }) {
         setSuccess('Parent account created. Please sign in, then connect a student from your dashboard.');
         setIsRegister(false);
         setPassword('');
+        setConfirmPassword('');
         return;
       }
       if (!data.isAdmin) {
@@ -70,6 +76,7 @@ function AdminLogin({ onLoginSuccess }) {
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-field"><label htmlFor="parent-mobile-number">{isRegister ? "Your mobile number" : "Mobile number"}</label><input id="parent-mobile-number" type="tel" placeholder={isRegister ? "Enter your own mobile number" : "Enter your registered mobile number"} value={mobileNumber} onChange={e => setMobileNumber(e.target.value)} autoComplete="tel" required disabled={loading} /></div>
             <div className="auth-field"><div className="auth-label-row"><label htmlFor="parent-password">Password</label><span className="auth-inline-note">{isRegister ? '8+ characters' : 'Keep it private'}</span></div><input id="parent-password" type="password" placeholder={isRegister ? 'Create a strong password' : 'Enter your password'} value={password} onChange={e => setPassword(e.target.value)} autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={8} required disabled={loading} /></div>
+            {isRegister && <div className="auth-field"><label htmlFor="parent-confirm-password">Confirm password</label><input id="parent-confirm-password" type="password" placeholder="Enter your password again" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={8} required disabled={loading} /></div>}
             {error && <div className="auth-notice error" role="alert">! <span>{error}</span></div>}
             {success && <div className="auth-notice success" role="status">✓ <span>{success}</span></div>}
             <button className="auth-submit auth-submit-parent" type="submit" disabled={loading}>{loading ? <><span className="auth-spinner" /> Please wait…</> : <>{isRegister ? 'Create parent account' : 'Open safety dashboard'} <span aria-hidden="true">↗</span></>}</button>
